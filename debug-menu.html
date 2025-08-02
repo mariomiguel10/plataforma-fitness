@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Generación de Menú</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">Debug - Generación de Menú</h1>
+        
+        <!-- Controles -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Controles de Prueba</h2>
+            <button id="test-menu-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-4">
+                Generar Menú de Prueba
+            </button>
+            <button id="clear-menu-btn" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                Limpiar Menú
+            </button>
+        </div>
+        
+        <!-- Logs -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Logs de Depuración</h2>
+            <div id="logs" class="bg-gray-100 p-4 rounded h-64 overflow-y-auto font-mono text-sm"></div>
+        </div>
+        
+        <!-- Menú Generado -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Menú Semanal</h2>
+            <div class="overflow-x-auto">
+                <table id="menu-table" class="min-w-full divide-y divide-gray-200 border"></table>
+            </div>
+        </div>
+        
+        <!-- Lista de Compra -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Lista de la Compra</h2>
+            <div id="shopping-list" class="bg-gray-50 p-4 rounded-lg grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm"></div>
+        </div>
+    </div>
+
+    <script>
+        // Bases de datos de ejemplo
+        const ingredientDB = { 
+            'Pechuga de Pollo':{cals:165,p:31,c:0,f:3.6},
+            'Salmón':{cals:208,p:20,c:0,f:13},
+            'Merluza':{cals:89,p:16,c:0,f:2},
+            'Huevos':{cals:155,p:13,c:1.1,f:11},
+            'Lentejas':{cals:116,p:9,c:20,f:0.4},
+            'Garbanzos':{cals:139,p:8,c:27,f:2.6},
+            'Arroz Blanco':{cals:130,p:2.7,c:28,f:0.3},
+            'Quinoa':{cals:120,p:4.1,c:21,f:1.9},
+            'Patata':{cals:77,p:2,c:17,f:0.1},
+            'Pan integral':{cals:247,p:13,c:41,f:3.2},
+            'Avena':{cals:68,p:2.4,c:12,f:1.4},
+            'Aguacate':{cals:160,p:2,c:9,f:15},
+            'Nueces':{cals:654,p:15,c:14,f:65},
+            'Aceite de Oliva':{cals:884,p:0,c:0,f:100},
+            'Brócoli':{cals:34,p:2.8,c:7,f:0.4},
+            'Espinacas':{cals:23,p:2.9,c:3.6,f:0.4},
+            'Tomate':{cals:18,p:0.9,c:3.9,f:0.2},
+            'Yogur Griego':{cals:59,p:10,c:3.6,f:0.4}
+        };
+        
+        const recipeTemplates = { 
+            desayuno:[
+                {name:'Tostadas con Aguacate y Huevo',ingredients:[{name:'Pan integral',baseQty:80},{name:'Aguacate',baseQty:50},{name:'Huevos',baseQty:120}]},
+                {name:'Avena con Frutas y Nueces',ingredients:[{name:'Avena',baseQty:50},{name:'Nueces',baseQty:20},{name:'Yogur Griego',baseQty:100}]}
+            ],
+            comida:[
+                {name:'Pollo con Arroz y Brócoli',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Brócoli',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón con Quinoa y Espinacas',ingredients:[{name:'Salmón',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Espinacas',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]}
+            ],
+            cena:[
+                {name:'Ensalada de Garbanzos',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},
+                {name:'Merluza con Patata cocida',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:200},{name:'Aceite de Oliva',baseQty:10}]}
+            ]
+        };
+
+        function log(message) {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function generateSmartWeeklyMenu(macros, noDinnerDays, exclusions) {
+            log("Iniciando generación de menú semanal");
+            log(`Macros: ${JSON.stringify(macros)}`);
+            log(`Días sin cena: ${JSON.stringify(noDinnerDays)}`);
+            log(`Exclusiones: ${JSON.stringify(exclusions)}`);
+            
+            const week = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const menu = {};
+            
+            const filteredTemplates = { 
+                desayuno: recipeTemplates.desayuno.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), 
+                comida: recipeTemplates.comida.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), 
+                cena: recipeTemplates.cena.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex)))
+            };
+            
+            log(`Templates filtrados: ${JSON.stringify(filteredTemplates)}`);
+            
+            week.forEach(day => {
+                log(`Procesando día: ${day}`);
+                const hasDinner = !noDinnerDays.includes(day);
+                const mealSlots = hasDinner ? ['desayuno', 'comida', 'cena'] : ['desayuno', 'comida'];
+                
+                log(`Comidas para ${day}: ${mealSlots.join(', ')}`);
+                
+                const dailyMacrosTarget = { cals: macros.target, p: macros.protein, c: macros.carbs, f: macros.fat };
+                const dayTemplates = { 
+                    desayuno: filteredTemplates.desayuno[Math.floor(Math.random() * filteredTemplates.desayuno.length)], 
+                    comida: filteredTemplates.comida[Math.floor(Math.random() * filteredTemplates.comida.length)], 
+                    cena: hasDinner && filteredTemplates.cena.length > 0 ? filteredTemplates.cena[Math.floor(Math.random() * filteredTemplates.cena.length)] : { name: 'Sin cena', ingredients: [] } 
+                };
+                
+                log(`Templates para ${day}: ${JSON.stringify(dayTemplates)}`);
+                
+                const adjustedMeals = {};
+                mealSlots.forEach((mealType) => {
+                    const mealTemplate = dayTemplates[mealType];
+                    const mealTargetCals = dailyMacrosTarget.cals / mealSlots.length;
+                    
+                    let baseCals = 0;
+                    mealTemplate.ingredients.forEach(ing => { 
+                        const ingInfo = ingredientDB[ing.name]; 
+                        if (ingInfo) {
+                            baseCals += (ing.baseQty / 100) * ingInfo.cals; 
+                        }
+                    });
+                    
+                    const adjustmentFactor = baseCals > 0 ? mealTargetCals / baseCals : 1;
+                    const adjustedIngredients = mealTemplate.ingredients.map(ing => ({ name: ing.name, qty: Math.round(ing.baseQty * adjustmentFactor) }));
+                    adjustedMeals[mealType] = { name: mealTemplate.name, ingredients: adjustedIngredients };
+                    
+                    log(`${day} ${mealType}: ${mealTemplate.name} (${adjustedIngredients.length} ingredientes)`);
+                });
+                
+                if (!hasDinner) adjustedMeals.cena = { name: 'Sin cena', ingredients: [] };
+                menu[day] = adjustedMeals;
+            });
+            
+            log(`Menú generado: ${JSON.stringify(menu)}`);
+            return menu;
+        }
+
+        function displayWeeklyMenu(menu) {
+            log("Mostrando menú semanal");
+            
+            if (!menu || Object.keys(menu).length === 0) {
+                log("ERROR: Menú vacío o indefinido");
+                document.getElementById('menu-table').innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No hay menú generado</td></tr>';
+                return;
+            }
+            
+            const days = Object.keys(menu);
+            const mealTypes = ['desayuno', 'comida', 'cena'];
+            
+            log(`Días: ${days.join(', ')}`);
+            log(`Tipos de comida: ${mealTypes.join(', ')}`);
+            
+            let headHTML = '<thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comida</th>';
+            days.forEach(day => headHTML += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${day}</th>`);
+            headHTML += '</tr></thead>';
+            
+            let bodyHTML = '<tbody class="bg-white divide-y divide-gray-200">';
+            mealTypes.forEach(meal => {
+                bodyHTML += `<tr><td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900 capitalize">${meal}</td>`;
+                days.forEach(day => {
+                    const recipe = menu[day][meal];
+                    
+                    if (!recipe) {
+                        bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">Error</td>`;
+                        log(`ERROR: No hay receta para ${day} ${meal}`);
+                    } else if (recipe.name === 'Sin cena') {
+                        bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">${recipe.name}</td>`;
+                    } else {
+                        bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-700 font-medium">${recipe.name}</td>`;
+                    }
+                });
+                bodyHTML += '</tr>';
+            });
+            bodyHTML += '</tbody>';
+            
+            document.getElementById('menu-table').innerHTML = headHTML + bodyHTML;
+            log("HTML del menú generado correctamente");
+        }
+
+        function displayShoppingList(menu) {
+            log("Generando lista de compra");
+            
+            const aggregatedList = {};
+            for (const day in menu) {
+                for (const meal in menu[day]) {
+                    if (menu[day][meal].ingredients) {
+                        menu[day][meal].ingredients.forEach(ing => {
+                            if (aggregatedList[ing.name]) {
+                                aggregatedList[ing.name] += ing.qty;
+                            } else {
+                                aggregatedList[ing.name] = ing.qty;
+                            }
+                        });
+                    }
+                }
+            }
+            
+            let listHTML = '';
+            for (const item in aggregatedList) {
+                const quantity = Number.isInteger(aggregatedList[item]) ? aggregatedList[item] : aggregatedList[item].toFixed(1);
+                listHTML += `<div><span class="font-medium">${item}:</span> ${quantity} g</div>`;
+            }
+            
+            document.getElementById('shopping-list').innerHTML = listHTML || '<p>No hay items en la lista.</p>';
+            log(`Lista de compra generada con ${Object.keys(aggregatedList).length} items`);
+        }
+
+        // Event listeners
+        document.getElementById('test-menu-btn').addEventListener('click', () => {
+            log("=== INICIANDO PRUEBA DE GENERACIÓN DE MENÚ ===");
+            
+            const macros = { target: 2000, protein: 126, fat: 56, carbs: 200 };
+            const noDinnerDays = [];
+            const exclusions = [];
+            
+            const menu = generateSmartWeeklyMenu(macros, noDinnerDays, exclusions);
+            displayWeeklyMenu(menu);
+            displayShoppingList(menu);
+            
+            log("=== PRUEBA COMPLETADA ===");
+        });
+
+        document.getElementById('clear-menu-btn').addEventListener('click', () => {
+            log("Limpiando menú");
+            document.getElementById('menu-table').innerHTML = '';
+            document.getElementById('shopping-list').innerHTML = '';
+            document.getElementById('logs').innerHTML = '';
+        });
+    </script>
+</body>
+</html> 

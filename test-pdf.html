@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Descarga de PDF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">Test de Descarga de PDF</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4">Estado de las Librerías</h2>
+            <div id="library-status" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4">Datos de Prueba</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Macros objetivo:</label>
+                    <input type="text" id="macros-input" class="w-full p-3 border border-gray-300 rounded-lg" 
+                           value="2200 kcal/día (180g P, 60g G, 200g C)" 
+                           placeholder="Ej: 2200 kcal/día (180g P, 60g G, 200g C)"
+                           aria-label="Macros objetivo">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del plan:</label>
+                    <input type="text" id="plan-name" class="w-full p-3 border border-gray-300 rounded-lg" 
+                           value="Plan de Prueba"
+                           placeholder="Ej: Plan de Prueba"
+                           aria-label="Nombre del plan">
+                </div>
+            </div>
+            <button id="test-pdf-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                Probar Descarga de PDF
+            </button>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold mb-4">Logs de Consola</h2>
+            <div id="logs" class="bg-gray-100 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML += `<div class="text-gray-700">${new Date().toLocaleTimeString()}: ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function checkLibraries() {
+            const statusDiv = document.getElementById('library-status');
+            let statusHTML = '';
+            
+            // Verificar jsPDF
+            if (window.jspdf) {
+                statusHTML += '<div class="text-green-600">✅ jsPDF cargado correctamente</div>';
+                log("jsPDF cargado correctamente");
+            } else {
+                statusHTML += '<div class="text-red-600">❌ jsPDF no está cargado</div>';
+                log("ERROR: jsPDF no está cargado");
+            }
+            
+            // Verificar autoTable
+            if (window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable) {
+                statusHTML += '<div class="text-green-600">✅ autoTable cargado correctamente</div>';
+                log("autoTable cargado correctamente");
+            } else {
+                statusHTML += '<div class="text-red-600">❌ autoTable no está cargado</div>';
+                log("ERROR: autoTable no está cargado");
+            }
+            
+            statusDiv.innerHTML = statusHTML;
+        }
+
+        function testPDFDownload() {
+            try {
+                log("=== INICIANDO TEST DE PDF ===");
+                
+                // Verificar librerías
+                if (!window.jspdf) {
+                    throw new Error("jsPDF no está cargado");
+                }
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                log("Documento PDF creado");
+                
+                // Datos de prueba
+                const macros = document.getElementById('macros-input').value;
+                const planName = document.getElementById('plan-name').value;
+                
+                // Página 1: Información básica
+                doc.setFontSize(18);
+                doc.text("Test de PDF - Plan Fitness", 14, 22);
+                doc.setFontSize(11);
+                doc.setTextColor(100);
+                doc.text(macros, 14, 30);
+                doc.text(`Plan: ${planName}`, 14, 40);
+                
+                // Crear tabla de prueba
+                const testData = [
+                    ['Día', 'Desayuno', 'Comida', 'Cena'],
+                    ['Lunes', 'Avena con frutas', 'Pollo con arroz', 'Ensalada'],
+                    ['Martes', 'Huevos revueltos', 'Salmón con quinoa', 'Sopa'],
+                    ['Miércoles', 'Smoothie', 'Pavo con verduras', 'Pescado'],
+                    ['Jueves', 'Tostadas', 'Lentejas', 'Ensalada'],
+                    ['Viernes', 'Yogur', 'Pollo', 'Sopa'],
+                    ['Sábado', 'Cereales', 'Pescado', 'Ensalada'],
+                    ['Domingo', '🍽️ Libre elección', '🍽️ Libre elección', '🍽️ Libre elección']
+                ];
+                
+                log("Creando tabla de prueba...");
+                
+                // Crear tabla de forma simple y robusta
+                try {
+                    log("Creando tabla manualmente...");
+                    let y = 50;
+                    testData.forEach((row, index) => {
+                        try {
+                            if (index === 0) {
+                                doc.setFontSize(10);
+                                doc.setFont(undefined, 'bold');
+                            } else {
+                                doc.setFontSize(8);
+                                doc.setFont(undefined, 'normal');
+                            }
+                            doc.text(row.join(' | '), 14, y);
+                            y += 8;
+                        } catch (textError) {
+                            log("Error escribiendo fila " + index + ": " + textError.message);
+                        }
+                    });
+                    log("Tabla creada manualmente");
+                } catch (tableError) {
+                    log("Error creando tabla: " + tableError.message);
+                }
+                
+                // Lista de la compra de prueba
+                doc.setFontSize(16);
+                doc.text("Lista de la Compra", 14, 140);
+                
+                const shoppingList = [
+                    'Pollo: 1.2 kg',
+                    'Salmón: 0.8 kg',
+                    'Arroz: 0.5 kg',
+                    'Quinoa: 0.3 kg',
+                    'Avena: 0.2 kg',
+                    'Huevos: 12 unidades',
+                    'Frutas: 1 kg',
+                    'Verduras: 2 kg'
+                ];
+                
+                let shoppingY = 150;
+                shoppingList.forEach(item => {
+                    doc.setFontSize(10);
+                    doc.text(`☐ ${item}`, 20, shoppingY);
+                    shoppingY += 6;
+                });
+                
+                // Página 2: Plan de entrenamiento
+                doc.addPage();
+                doc.setFontSize(18);
+                doc.text("Plan de Entrenamiento", 14, 22);
+                
+                const workoutDays = [
+                    'Lunes: Pecho y Tríceps',
+                    'Martes: Espalda y Bíceps',
+                    'Miércoles: Pierna',
+                    'Jueves: Hombro',
+                    'Viernes: Full Body',
+                    'Sábado: Descanso',
+                    'Domingo: Descanso'
+                ];
+                
+                let workoutY = 40;
+                workoutDays.forEach(day => {
+                    doc.setFontSize(12);
+                    doc.text(day, 14, workoutY);
+                    workoutY += 12;
+                });
+                
+                // Guardar PDF
+                const fileName = `test-pdf-${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                
+                log("✅ PDF descargado exitosamente: " + fileName);
+                alert("✅ PDF de prueba descargado exitosamente: " + fileName);
+                
+            } catch (error) {
+                log("❌ Error generando PDF: " + error.message);
+                alert("❌ Error generando PDF: " + error.message);
+                console.error("Error completo:", error);
+            }
+        }
+
+        // Verificar librerías al cargar
+        window.addEventListener('load', () => {
+            setTimeout(checkLibraries, 1000); // Dar tiempo a que se carguen las librerías
+        });
+        
+        document.getElementById('test-pdf-btn').addEventListener('click', testPDFDownload);
+    </script>
+</body>
+</html> 

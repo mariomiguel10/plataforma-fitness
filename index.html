@@ -66,6 +66,34 @@
         </div>
     </div>
 
+    <!-- Edit Meal Modal -->
+    <div id="edit-meal-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+            <button id="close-edit-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <h2 id="edit-modal-title" class="text-2xl font-bold mb-4 text-gray-900">Cambiar Comida</h2>
+            <div id="edit-modal-content">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar nueva receta:</label>
+                    <select id="new-recipe-select" aria-label="Seleccionar nueva receta" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Cargando recetas...</option>
+                    </select>
+                </div>
+                <div id="new-recipe-preview" class="hidden bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold text-gray-800 mb-2">Vista previa:</h4>
+                    <div id="preview-content"></div>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="apply-change-btn" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Aplicar Cambio
+                    </button>
+                    <button id="cancel-change-btn" class="flex-1 bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-6xl">
         
@@ -119,15 +147,41 @@
         <!-- Generador de Menús -->
         <div id="menu-generator-section" class="bg-white p-6 rounded-2xl shadow-lg mt-8 hidden-section">
             <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">2. Personaliza y Genera Plan</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Alimentos Favoritos -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">🍽️ Alimentos Favoritos</h3>
+                <p class="text-sm text-gray-600 mb-4">Agrega alimentos que te gustan para que tengan prioridad en tu menú</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="favorite-foods" class="block text-sm font-medium text-gray-700 mb-2">Agregar alimento favorito:</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="favorite-foods" class="flex-1 rounded-md border-gray-300 shadow-sm p-2" placeholder="Ej: salmón, aguacate, quinoa...">
+                            <button id="add-favorite-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm">
+                                Agregar
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alimentos favoritos actuales:</label>
+                        <div id="favorites-list" class="bg-gray-50 p-3 rounded-md min-h-[40px]">
+                            <p class="text-gray-500 text-sm">No hay alimentos favoritos agregados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Exclusiones, Días sin Cena y Día Libre -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div><label for="exclusions" class="block text-sm font-medium text-gray-700">Alimentos a excluir</label><input type="text" id="exclusions" name="exclusions" class="mt-1 block w-full rounded-md p-2" placeholder="Ej: brócoli, pescado..."></div>
                 <div><label class="block text-sm font-medium text-gray-700">Días sin cena</label><div id="no-dinner-days" class="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2"></div></div>
+                <div><label for="free-choice-day" class="block text-sm font-medium text-gray-700">Día de libre elección</label><select id="free-choice-day" class="mt-1 block w-full rounded-md p-2"><option value="Domingo">Domingo</option><option value="Sábado">Sábado</option><option value="Viernes">Viernes</option><option value="Jueves">Jueves</option><option value="Miércoles">Miércoles</option><option value="Martes">Martes</option><option value="Lunes">Lunes</option><option value="Ninguno">Ninguno</option></select></div>
             </div>
             <div class="mt-8"><button id="generate-menu-btn" class="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700">Generar Plan Inteligente</button></div>
         </div>
 
         <!-- Display de Planes -->
-        <div id="plan-display-section" class="mt-8 hidden-section">
+        <div id="plan-display-section" class="mt-8 hidden">
             <div class="border-b border-gray-200 mb-4">
                 <nav class="-mb-px flex space-x-4" aria-label="Tabs">
                     <button id="tab-nutrition" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">Nutrición</button>
@@ -144,6 +198,20 @@
                     <h3 class="text-xl font-semibold mb-4 text-gray-700">Menú Semanal</h3>
                     <div class="overflow-x-auto"><table id="menu-table" class="min-w-full divide-y divide-gray-200 border"></table></div>
                     <h3 class="text-xl font-semibold mt-8 mb-4 text-gray-700">Lista de la Compra</h3>
+                    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                        <button id="export-keep-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Guardar en Google Keep
+                        </button>
+                        <button id="copy-list-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            Copiar Lista
+                        </button>
+                    </div>
                     <div id="shopping-list" class="bg-gray-50 p-4 rounded-lg grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm"></div>
                 </div>
             </div>
@@ -187,6 +255,14 @@
             aiRecipeOutput: document.getElementById('ai-recipe-output'),
             recipeLoaderContainer: document.getElementById('recipe-loader-container'),
             recipeText: document.getElementById('recipe-text'),
+            editMealModal: document.getElementById('edit-meal-modal'),
+            closeEditModalBtn: document.getElementById('close-edit-modal-btn'),
+            editModalTitle: document.getElementById('edit-modal-title'),
+            newRecipeSelect: document.getElementById('new-recipe-select'),
+            newRecipePreview: document.getElementById('new-recipe-preview'),
+            previewContent: document.getElementById('preview-content'),
+            applyChangeBtn: document.getElementById('apply-change-btn'),
+            cancelChangeBtn: document.getElementById('cancel-change-btn'),
             userInfo: document.getElementById('user-info'),
             dashboard: document.getElementById('dashboard'),
             profileSwitcher: document.getElementById('profile-switcher'),
@@ -203,6 +279,10 @@
             menuGeneratorSection: document.getElementById('menu-generator-section'),
             generateMenuBtn: document.getElementById('generate-menu-btn'),
             planDisplaySection: document.getElementById('plan-display-section'),
+            favoriteFoodsInput: document.getElementById('favorite-foods'),
+            freeChoiceDaySelect: document.getElementById('free-choice-day'),
+            addFavoriteBtn: document.getElementById('add-favorite-btn'),
+            favoritesList: document.getElementById('favorites-list'),
             tabs: {
                 nutrition: document.getElementById('tab-nutrition'),
                 workout: document.getElementById('tab-workout'),
@@ -214,6 +294,8 @@
                 progress: document.getElementById('progress-content'),
             },
             downloadPdfBtn: document.getElementById('download-pdf-btn'),
+            exportKeepBtn: document.getElementById('export-keep-btn'),
+            copyListBtn: document.getElementById('copy-list-btn'),
             menuTable: document.getElementById('menu-table'),
             shoppingList: document.getElementById('shopping-list'),
             workoutPlan: document.getElementById('workout-plan'),
@@ -226,10 +308,120 @@
         let profiles = new Map();
         let userMacros = null, weeklyMenu = null, weeklyWorkout = null, progressData = [], progressChart = null;
         let db, auth, userId, appId;
+        let currentEditDay = null, currentEditMeal = null;
+        let favoriteFoods = [];
 
         // --- Databases ---
-        const ingredientDB = { 'Pechuga de Pollo':{cals:165,p:31,c:0,f:3.6},'Salmón':{cals:208,p:20,c:0,f:13},'Merluza':{cals:89,p:16,c:0,f:2},'Huevos':{cals:155,p:13,c:1.1,f:11},'Lentejas':{cals:116,p:9,c:20,f:0.4},'Garbanzos':{cals:139,p:8,c:27,f:2.6},'Arroz Blanco':{cals:130,p:2.7,c:28,f:0.3},'Quinoa':{cals:120,p:4.1,c:21,f:1.9},'Patata':{cals:77,p:2,c:17,f:0.1},'Pan integral':{cals:247,p:13,c:41,f:3.2},'Avena':{cals:68,p:2.4,c:12,f:1.4},'Aguacate':{cals:160,p:2,c:9,f:15},'Nueces':{cals:654,p:15,c:14,f:65},'Aceite de Oliva':{cals:884,p:0,c:0,f:100},'Brócoli':{cals:34,p:2.8,c:7,f:0.4},'Espinacas':{cals:23,p:2.9,c:3.6,f:0.4},'Tomate':{cals:18,p:0.9,c:3.9,f:0.2},'Yogur Griego':{cals:59,p:10,c:3.6,f:0.4}, };
-        const recipeTemplates = { desayuno:[{name:'Tostadas con Aguacate y Huevo',ingredients:[{name:'Pan integral',baseQty:80},{name:'Aguacate',baseQty:50},{name:'Huevos',baseQty:120}]},{name:'Avena con Frutas y Nueces',ingredients:[{name:'Avena',baseQty:50},{name:'Nueces',baseQty:20},{name:'Yogur Griego',baseQty:100}]}],comida:[{name:'Pollo con Arroz y Brócoli',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Brócoli',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},{name:'Salmón con Quinoa y Espinacas',ingredients:[{name:'Salmón',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Espinacas',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]}],cena:[{name:'Ensalada de Garbanzos',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},{name:'Merluza con Patata cocida',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:200},{name:'Aceite de Oliva',baseQty:10}]}] };
+        const ingredientDB = { 
+            // Proteínas animales
+            'Pechuga de Pollo':{cals:165,p:31,c:0,f:3.6},
+            'Salmón':{cals:208,p:20,c:0,f:13},
+            'Merluza':{cals:89,p:16,c:0,f:2},
+            'Atún':{cals:144,p:23,c:0,f:5},
+            'Pavo':{cals:189,p:29,c:0,f:7},
+            'Huevos':{cals:155,p:13,c:1.1,f:11},
+            'Jamón Serrano':{cals:251,p:28,c:0,f:15},
+            
+            // Legumbres
+            'Lentejas':{cals:116,p:9,c:20,f:0.4},
+            'Garbanzos':{cals:139,p:8,c:27,f:2.6},
+            'Alubias':{cals:127,p:9,c:23,f:0.5},
+            
+            // Cereales
+            'Arroz Blanco':{cals:130,p:2.7,c:28,f:0.3},
+            'Arroz Integral':{cals:111,p:2.6,c:23,f:0.9},
+            'Quinoa':{cals:120,p:4.1,c:21,f:1.9},
+            'Pasta Integral':{cals:124,p:5,c:25,f:1.1},
+            'Pan integral':{cals:247,p:13,c:41,f:3.2},
+            'Avena':{cals:68,p:2.4,c:12,f:1.4},
+            
+            // Tubérculos
+            'Patata':{cals:77,p:2,c:17,f:0.1},
+            'Boniato':{cals:86,p:1.6,c:20,f:0.1},
+            
+            // Frutas y verduras
+            'Aguacate':{cals:160,p:2,c:9,f:15},
+            'Brócoli':{cals:34,p:2.8,c:7,f:0.4},
+            'Espinacas':{cals:23,p:2.9,c:3.6,f:0.4},
+            'Tomate':{cals:18,p:0.9,c:3.9,f:0.2},
+            'Zanahoria':{cals:41,p:0.9,c:10,f:0.2},
+            'Pepino':{cals:16,p:0.7,c:4,f:0.1},
+            'Lechuga':{cals:15,p:1.4,c:3,f:0.1},
+            'Cebolla':{cals:40,p:1.1,c:9,f:0.1},
+            'Pimiento':{cals:20,p:0.9,c:5,f:0.2},
+            'Calabacín':{cals:17,p:1.2,c:3,f:0.3},
+            'Berenjena':{cals:25,p:1.0,c:6,f:0.2},
+            
+            // Frutos secos y semillas
+            'Nueces':{cals:654,p:15,c:14,f:65},
+            'Almendras':{cals:579,p:21,c:22,f:50},
+            'Pistachos':{cals:560,p:20,c:28,f:45},
+            'Semillas de Chía':{cals:486,p:17,c:42,f:31},
+            'Semillas de Girasol':{cals:584,p:21,c:20,f:51},
+            
+            // Lácteos y quesos
+            'Yogur Griego':{cals:59,p:10,c:3.6,f:0.4},
+            'Queso Feta':{cals:264,p:14,c:4,f:21},
+            'Queso Cottage':{cals:98,p:11,c:3.4,f:4.3},
+            'Queso Mozzarella':{cals:280,p:28,c:2,f:17},
+            'Queso Parmesano':{cals:431,p:38,c:4,f:29},
+            'Leche Desnatada':{cals:42,p:3.4,c:5,f:0.1},
+            
+            // Aceites y grasas
+            'Aceite de Oliva':{cals:884,p:0,c:0,f:100},
+            'Aceite de Coco':{cals:862,p:0,c:0,f:100},
+            
+            // Otros
+            'Miel':{cals:304,p:0,c:82,f:0},
+            'Canela':{cals:247,p:4,c:81,f:1.2},
+            'Ajo':{cals:149,p:6,c:33,f:0.5},
+            'Jengibre':{cals:80,p:1.8,c:18,f:0.8}
+        };
+        const recipeTemplates = { 
+            desayuno:[
+                {name:'Tostadas con Aguacate y Huevo',ingredients:[{name:'Pan integral',baseQty:80},{name:'Aguacate',baseQty:50},{name:'Huevos',baseQty:120}]},
+                {name:'Avena con Frutas y Nueces',ingredients:[{name:'Avena',baseQty:50},{name:'Nueces',baseQty:20},{name:'Yogur Griego',baseQty:100}]},
+                {name:'Smoothie de Proteína',ingredients:[{name:'Yogur Griego',baseQty:150},{name:'Avena',baseQty:30},{name:'Nueces',baseQty:15},{name:'Aguacate',baseQty:30}]},
+                {name:'Huevos Revueltos con Salmón',ingredients:[{name:'Huevos',baseQty:150},{name:'Salmón',baseQty:50},{name:'Pan integral',baseQty:60}]},
+                {name:'Bowl de Quinoa y Frutas',ingredients:[{name:'Quinoa',baseQty:60},{name:'Yogur Griego',baseQty:100},{name:'Nueces',baseQty:20}]},
+                {name:'Tostadas con Queso Feta y Tomate',ingredients:[{name:'Pan integral',baseQty:80},{name:'Queso Feta',baseQty:50},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:5}]},
+                {name:'Bowl de Yogur con Almendras',ingredients:[{name:'Yogur Griego',baseQty:150},{name:'Almendras',baseQty:30},{name:'Miel',baseQty:10},{name:'Canela',baseQty:2}]},
+                {name:'Huevos con Queso Cottage',ingredients:[{name:'Huevos',baseQty:150},{name:'Queso Cottage',baseQty:100},{name:'Pan integral',baseQty:60}]},
+                {name:'Avena con Semillas de Chía',ingredients:[{name:'Avena',baseQty:50},{name:'Semillas de Chía',baseQty:15},{name:'Leche Desnatada',baseQty:100},{name:'Miel',baseQty:10}]},
+                {name:'Smoothie Verde con Aguacate',ingredients:[{name:'Aguacate',baseQty:50},{name:'Espinacas',baseQty:50},{name:'Leche Desnatada',baseQty:150},{name:'Miel',baseQty:10}]}
+            ],
+            comida:[
+                {name:'Pollo con Arroz y Brócoli',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Brócoli',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón con Quinoa y Espinacas',ingredients:[{name:'Salmón',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Espinacas',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Garbanzos con Aguacate',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Aguacate',baseQty:80},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},
+                {name:'Merluza con Patata y Verduras',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:150},{name:'Brócoli',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Lentejas con Arroz Integral',ingredients:[{name:'Lentejas',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Pollo a la Plancha con Quinoa',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Brócoli',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada Mediterránea con Queso Feta',ingredients:[{name:'Queso Feta',baseQty:80},{name:'Tomate',baseQty:150},{name:'Pepino',baseQty:100},{name:'Lechuga',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},
+                {name:'Atún con Pasta Integral',ingredients:[{name:'Atún',baseQty:150},{name:'Pasta Integral',baseQty:80},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Pavo con Boniato',ingredients:[{name:'Pavo',baseQty:150},{name:'Boniato',baseQty:150},{name:'Brócoli',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Quinoa con Queso Feta',ingredients:[{name:'Quinoa',baseQty:80},{name:'Queso Feta',baseQty:60},{name:'Pepino',baseQty:100},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón con Ensalada de Aguacate',ingredients:[{name:'Salmón',baseQty:150},{name:'Aguacate',baseQty:100},{name:'Lechuga',baseQty:100},{name:'Tomate',baseQty:80},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Pollo con Ensalada de Pistachos',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Pistachos',baseQty:30},{name:'Lechuga',baseQty:100},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Alubias con Arroz y Queso Feta',ingredients:[{name:'Alubias',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Queso Feta',baseQty:50},{name:'Cebolla',baseQty:50},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Aguacate con Semillas',ingredients:[{name:'Aguacate',baseQty:100},{name:'Semillas de Girasol',baseQty:20},{name:'Lechuga',baseQty:100},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]}
+            ],
+            cena:[
+                {name:'Ensalada de Garbanzos',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},
+                {name:'Merluza con Patata cocida',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:200},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón al Horno con Verduras',ingredients:[{name:'Salmón',baseQty:180},{name:'Brócoli',baseQty:150},{name:'Patata',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Aguacate y Huevo',ingredients:[{name:'Aguacate',baseQty:100},{name:'Huevos',baseQty:120},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Sopa de Lentejas',ingredients:[{name:'Lentejas',baseQty:150},{name:'Patata',baseQty:100},{name:'Espinacas',baseQty:50},{name:'Aceite de Oliva',baseQty:5}]},
+                {name:'Ensalada Griega con Queso Feta',ingredients:[{name:'Queso Feta',baseQty:80},{name:'Tomate',baseQty:120},{name:'Pepino',baseQty:100},{name:'Cebolla',baseQty:50},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón con Ensalada de Aguacate',ingredients:[{name:'Salmón',baseQty:150},{name:'Aguacate',baseQty:80},{name:'Lechuga',baseQty:100},{name:'Tomate',baseQty:80},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Quinoa con Queso Feta',ingredients:[{name:'Quinoa',baseQty:80},{name:'Queso Feta',baseQty:60},{name:'Pepino',baseQty:100},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Sopa de Verduras con Queso Cottage',ingredients:[{name:'Queso Cottage',baseQty:100},{name:'Zanahoria',baseQty:100},{name:'Calabacín',baseQty:100},{name:'Cebolla',baseQty:50},{name:'Aceite de Oliva',baseQty:5}]},
+                {name:'Ensalada de Atún con Aguacate',ingredients:[{name:'Atún',baseQty:120},{name:'Aguacate',baseQty:80},{name:'Lechuga',baseQty:100},{name:'Tomate',baseQty:80},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Pollo con Ensalada Mediterránea',ingredients:[{name:'Pechuga de Pollo',baseQty:120},{name:'Queso Feta',baseQty:50},{name:'Tomate',baseQty:100},{name:'Pepino',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Garbanzos con Queso Feta',ingredients:[{name:'Garbanzos',baseQty:120},{name:'Queso Feta',baseQty:60},{name:'Tomate',baseQty:100},{name:'Pepino',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Sopa de Lentejas con Queso Feta',ingredients:[{name:'Lentejas',baseQty:120},{name:'Queso Feta',baseQty:50},{name:'Cebolla',baseQty:50},{name:'Zanahoria',baseQty:80},{name:'Aceite de Oliva',baseQty:5}]}
+            ]
+        };
         const workoutDB = { routines:{'3-day':{name:'Full Body - 3 Días',schedule:{'Lunes':'Día 1','Martes':'Descanso','Miércoles':'Día 2','Jueves':'Descanso','Viernes':'Día 3','Sábado':'Descanso','Domingo':'Descanso'}},'4-day':{name:'Torso/Pierna - 4 Días',schedule:{'Lunes':'Torso','Martes':'Pierna','Miércoles':'Descanso','Jueves':'Torso','Viernes':'Pierna','Sábado':'Descanso','Domingo':'Descanso'}},'5-day':{name:'Weider Frecuencia 1 - 5 Días',schedule:{'Lunes':'Pecho y Tríceps','Martes':'Espalda y Bíceps','Miércoles':'Pierna','Jueves':'Hombro','Viernes':'Full Body Ligero','Sábado':'Descanso','Domingo':'Descanso'}}},workouts:{'Día 1':[{ex:'Sentadillas',sets:'4x8-10'},{ex:'Press Banca',sets:'4x8-10'},{ex:'Remo con Barra',sets:'3x10-12'},{ex:'Press Militar',sets:'3x10-12'}],'Día 2':[{ex:'Peso Muerto',sets:'4x6-8'},{ex:'Dominadas',sets:'4xAl fallo'},{ex:'Fondos en paralelas',sets:'3x10-12'},{ex:'Zancadas',sets:'3x12-15'}],'Día 3':[{ex:'Prensa',sets:'4x12-15'},{ex:'Press Inclinado',sets:'4x10-12'},{ex:'Jalón al pecho',sets:'3x10-12'},{ex:'Elevaciones laterales',sets:'3x15-20'}],'Torso':[{ex:'Press Banca',sets:'4x8-10'},{ex:'Remo con Barra',sets:'4x8-10'},{ex:'Press Militar',sets:'3x10-12'},{ex:'Curl de Bíceps',sets:'3x12'},{ex:'Extensión Tríceps',sets:'3x12'}],'Pierna':[{ex:'Sentadillas',sets:'4x8-10'},{ex:'Peso Muerto Rumano',sets:'4x10-12'},{ex:'Prensa',sets:'3x12-15'},{ex:'Curl Femoral',sets:'3x15'},{ex:'Gemelos',sets:'4x20'}],'Pecho y Tríceps':[{ex:'Press Banca',sets:'4x8-10'},{ex:'Press Inclinado Mancuerna',sets:'3x10'},{ex:'Aperturas',sets:'3x12'},{ex:'Press Francés',sets:'3x10'},{ex:'Fondos',sets:'3xAl fallo'}],'Espalda y Bíceps':[{ex:'Dominadas',sets:'4xAl fallo'},{ex:'Remo con Barra',sets:'4x8-10'},{ex:'Remo en polea baja',sets:'3x12'},{ex:'Curl con Barra',sets:'3x10'},{ex:'Curl Martillo',sets:'3x12'}],'Hombro':[{ex:'Press Militar',sets:'4x8-10'},{ex:'Elevaciones Laterales',sets:'4x12-15'},{ex:'Pájaros',sets:'3x15'},{ex:'Face Pull',sets:'3x15'}],'Full Body Ligero':[{ex:'Sentadilla Goblet',sets:'3x15'},{ex:'Flexiones',sets:'3xAl fallo'},{ex:'Remo con mancuerna',sets:'3x12'},{ex:'Plancha',sets:'3x1 min'}]} };
         
         // --- Initialization ---
@@ -460,6 +652,22 @@
         DOMElements.newProfileBtn.addEventListener('click', setupNewProfile);
         DOMElements.profileForm.addEventListener('submit', (e) => { e.preventDefault(); saveProfile(); });
         DOMElements.closeModalBtn.addEventListener('click', () => DOMElements.recipeModal.classList.add('hidden'));
+        DOMElements.closeEditModalBtn.addEventListener('click', () => DOMElements.editMealModal.classList.add('hidden'));
+        DOMElements.newRecipeSelect.addEventListener('change', (e) => {
+            if (e.target.value && currentEditMeal) {
+                showRecipePreview(e.target.value, currentEditMeal);
+            } else {
+                DOMElements.newRecipePreview.classList.add('hidden');
+            }
+        });
+        DOMElements.applyChangeBtn.addEventListener('click', applyMealChange);
+        DOMElements.cancelChangeBtn.addEventListener('click', () => DOMElements.editMealModal.classList.add('hidden'));
+        DOMElements.addFavoriteBtn.addEventListener('click', addFavoriteFood);
+        DOMElements.favoriteFoodsInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addFavoriteFood();
+            }
+        });
         DOMElements.generateMenuBtn.addEventListener('click', async () => {
             if (!userMacros) {
                 alert("Primero necesitas crear y guardar un perfil para calcular tus macros. Completa el formulario de perfil y haz clic en 'Guardar Perfil'.");
@@ -471,17 +679,34 @@
                 DOMElements.generateMenuBtn.textContent = "Generando...";
                 DOMElements.generateMenuBtn.disabled = true;
                 
+                console.log("Generando plan con macros:", userMacros);
+                
                 const exclusionsInput = document.getElementById('exclusions').value.toLowerCase();
                 const excludedFoods = exclusionsInput ? exclusionsInput.split(',').map(item => item.trim()) : [];
                 const noDinnerDays = Array.from(document.querySelectorAll('input[name="no-dinner"]:checked')).map(cb => cb.value);
                 
+                console.log("Exclusiones:", excludedFoods);
+                console.log("Días sin cena:", noDinnerDays);
+                console.log("Input de exclusiones original:", document.getElementById('exclusions').value);
+                
                 weeklyMenu = generateSmartWeeklyMenu(userMacros, noDinnerDays, excludedFoods);
                 weeklyWorkout = assignWorkout();
+                
+                console.log("Menú generado:", weeklyMenu);
+                console.log("Workout generado:", weeklyWorkout);
+                
+                // Mostrar el plan
                 displayWeeklyMenu(weeklyMenu);
                 displayShoppingList(weeklyMenu);
                 displayWeeklyWorkout(weeklyWorkout);
                 displayDashboard();
+                
+                // Mostrar la sección del plan
                 DOMElements.planDisplaySection.classList.remove('hidden');
+                
+                // Hacer scroll hacia el plan
+                DOMElements.planDisplaySection.scrollIntoView({ behavior: 'smooth' });
+                
                 await saveUserPlans(weeklyMenu, weeklyWorkout);
                 
                 // Mostrar mensaje de éxito
@@ -619,53 +844,296 @@
             const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
             document.getElementById('no-dinner-days').innerHTML = days.map(day => `<label class="flex items-center text-sm"><input type="checkbox" name="no-dinner" value="${day}" class="rounded text-indigo-600 focus:ring-indigo-500"><span class="ml-2">${day.substring(0,3)}</span></label>`).join('');
             DOMElements.menuGeneratorSection.classList.add('visible-section');
+            displayFavoriteFoods();
+        }
+
+        function addFavoriteFood() {
+            const input = DOMElements.favoriteFoodsInput;
+            const food = input.value.trim().toLowerCase();
+            
+            if (!food) {
+                alert('Por favor ingresa un alimento');
+                return;
+            }
+            
+            if (favoriteFoods.includes(food)) {
+                alert('Este alimento ya está en tu lista de favoritos');
+                return;
+            }
+            
+            favoriteFoods.push(food);
+            input.value = '';
+            displayFavoriteFoods();
+        }
+
+        window.removeFavoriteFood = function(food) {
+            favoriteFoods = favoriteFoods.filter(f => f !== food);
+            displayFavoriteFoods();
+        };
+
+        function displayFavoriteFoods() {
+            const container = DOMElements.favoritesList;
+            
+            if (favoriteFoods.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm">No hay alimentos favoritos agregados</p>';
+                return;
+            }
+            
+            const foodsHTML = favoriteFoods.map(food => `
+                <div class="inline-flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm mr-2 mb-2">
+                    <span>${food}</span>
+                    <button onclick="removeFavoriteFood('${food}')" class="ml-2 text-blue-600 hover:text-blue-800 font-bold">&times;</button>
+                </div>
+            `).join('');
+            
+            container.innerHTML = foodsHTML;
         }
 
         function generateSmartWeeklyMenu(macros, noDinnerDays, exclusions) {
+            console.log("=== GENERANDO MENÚ INTELIGENTE ===");
+            console.log("Alimentos favoritos:", favoriteFoods);
+            console.log("Exclusiones:", exclusions);
+            console.log("Días sin cena:", noDinnerDays);
+            
             const week = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
             const menu = {};
-            const filteredTemplates = { desayuno: recipeTemplates.desayuno.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), comida: recipeTemplates.comida.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), cena: recipeTemplates.cena.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), };
+            
+            // Filtrar templates excluyendo alimentos no deseados (por nombre de receta e ingredientes)
+            const filteredTemplates = { 
+                desayuno: recipeTemplates.desayuno.filter(r => 
+                    !exclusions.some(ex => 
+                        r.name.toLowerCase().includes(ex) ||
+                        r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                    )
+                ), 
+                comida: recipeTemplates.comida.filter(r => 
+                    !exclusions.some(ex => 
+                        r.name.toLowerCase().includes(ex) ||
+                        r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                    )
+                ), 
+                cena: recipeTemplates.cena.filter(r => 
+                    !exclusions.some(ex => 
+                        r.name.toLowerCase().includes(ex) ||
+                        r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                    )
+                )
+            };
+            
+            console.log("Templates filtrados:", filteredTemplates);
+            console.log("Recetas excluidas por tipo:");
+            console.log("- Desayunos excluidas:", recipeTemplates.desayuno.length - filteredTemplates.desayuno.length);
+            console.log("- Comidas excluidas:", recipeTemplates.comida.length - filteredTemplates.comida.length);
+            console.log("- Cenas excluidas:", recipeTemplates.cena.length - filteredTemplates.cena.length);
+            
+            // Mostrar qué recetas fueron excluidas
+            if (exclusions.length > 0) {
+                console.log("Recetas excluidas por contener:", exclusions);
+                ['desayuno', 'comida', 'cena'].forEach(mealType => {
+                    const excludedRecipes = recipeTemplates[mealType].filter(r => 
+                        exclusions.some(ex => 
+                            r.name.toLowerCase().includes(ex) ||
+                            r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                        )
+                    );
+                    if (excludedRecipes.length > 0) {
+                        console.log(`${mealType} excluidas:`, excludedRecipes.map(r => r.name));
+                    }
+                });
+            }
+            
+            // Variables para controlar la variedad
+            let usedRecipes = new Set();
+            let favoriteFoodUsage = {};
+            favoriteFoods.forEach(food => favoriteFoodUsage[food] = 0);
+            
+            // Obtener día de libre elección seleccionado por el usuario
+            const freeChoiceDay = DOMElements.freeChoiceDaySelect.value;
+            console.log(`Día de libre elección: ${freeChoiceDay}`);
+            
+            // Función mejorada para seleccionar recetas sin repeticiones
+            function selectRecipe(templates, mealType, day) {
+                if (templates.length === 0) return null;
+                
+                // Filtrar recetas no usadas
+                const unusedRecipes = templates.filter(recipe => !usedRecipes.has(recipe.name));
+                
+                if (unusedRecipes.length === 0) {
+                    console.log(`⚠️ Todas las recetas de ${mealType} han sido usadas. Reseteando...`);
+                    usedRecipes.clear();
+                    return templates[Math.floor(Math.random() * templates.length)];
+                }
+                
+                // Si hay alimentos favoritos, priorizar recetas que los contengan
+                if (favoriteFoods.length > 0) {
+                    const favoriteRecipes = unusedRecipes.filter(recipe => 
+                        favoriteFoods.some(fav => 
+                            recipe.name.toLowerCase().includes(fav) ||
+                            recipe.ingredients.some(ing => ing.name.toLowerCase().includes(fav))
+                        )
+                    );
+                    
+                    console.log(`${day} ${mealType} - Recetas con favoritos:`, favoriteRecipes.map(r => r.name));
+                    
+                    if (favoriteRecipes.length > 0) {
+                        // Priorizar alimentos favoritos que se han usado menos
+                        const sortedFavorites = favoriteRecipes.sort((a, b) => {
+                            const aScore = favoriteFoods.reduce((score, fav) => {
+                                const hasFood = a.name.toLowerCase().includes(fav) || 
+                                               a.ingredients.some(ing => ing.name.toLowerCase().includes(fav));
+                                return score + (hasFood ? favoriteFoodUsage[fav] : 0);
+                            }, 0);
+                            const bScore = favoriteFoods.reduce((score, fav) => {
+                                const hasFood = b.name.toLowerCase().includes(fav) || 
+                                               b.ingredients.some(ing => ing.name.toLowerCase().includes(fav));
+                                return score + (hasFood ? favoriteFoodUsage[fav] : 0);
+                            }, 0);
+                            return aScore - bScore;
+                        });
+                        
+                        // 70% de probabilidad de elegir una receta con favoritos
+                        if (Math.random() < 0.7) {
+                            const selected = sortedFavorites[0];
+                            usedRecipes.add(selected.name);
+                            
+                            // Actualizar contador de uso de alimentos favoritos
+                            favoriteFoods.forEach(fav => {
+                                if (selected.name.toLowerCase().includes(fav) || 
+                                    selected.ingredients.some(ing => ing.name.toLowerCase().includes(fav))) {
+                                    favoriteFoodUsage[fav]++;
+                                }
+                            });
+                            return selected;
+                        }
+                    }
+                }
+                
+                // Elegir una receta no usada aleatoriamente
+                const selected = unusedRecipes[Math.floor(Math.random() * unusedRecipes.length)];
+                usedRecipes.add(selected.name);
+                return selected;
+            }
+            
             week.forEach(day => {
+                console.log(`\n--- Generando menú para ${day} ---`);
+                
+                // Si es el día de libre elección, asignar comidas especiales
+                if (freeChoiceDay !== 'Ninguno' && day === freeChoiceDay) {
+                    console.log(`${day}: DÍA DE LIBRE ELECCIÓN`);
+                    menu[day] = {
+                        desayuno: { name: '🍽️ Libre elección - Desayuno', ingredients: [] },
+                        comida: { name: '🍽️ Libre elección - Comida', ingredients: [] },
+                        cena: { name: '🍽️ Libre elección - Cena', ingredients: [] }
+                    };
+                    return;
+                }
+                
                 const hasDinner = !noDinnerDays.includes(day);
                 const mealSlots = hasDinner ? ['desayuno', 'comida', 'cena'] : ['desayuno', 'comida'];
                 const dailyMacrosTarget = { cals: macros.target, p: macros.protein, c: macros.carbs, f: macros.fat };
-                const dayTemplates = { desayuno: filteredTemplates.desayuno[Math.floor(Math.random() * filteredTemplates.desayuno.length)], comida: filteredTemplates.comida[Math.floor(Math.random() * filteredTemplates.comida.length)], cena: hasDinner && filteredTemplates.cena.length > 0 ? filteredTemplates.cena[Math.floor(Math.random() * filteredTemplates.cena.length)] : { name: 'Sin cena', ingredients: [] } };
+                
                 const adjustedMeals = {};
                 mealSlots.forEach((mealType) => {
-                    const mealTemplate = dayTemplates[mealType];
+                    const selectedRecipe = selectRecipe(filteredTemplates[mealType], mealType, day);
+                    
+                    if (!selectedRecipe) {
+                        adjustedMeals[mealType] = { name: 'Sin opciones disponibles', ingredients: [] };
+                        return;
+                    }
+                    
+                    console.log(`${day} ${mealType}: ${selectedRecipe.name}`);
+                    
                     const mealTargetCals = dailyMacrosTarget.cals / mealSlots.length;
                     let baseCals = 0;
-                    mealTemplate.ingredients.forEach(ing => { const ingInfo = ingredientDB[ing.name]; baseCals += (ing.baseQty / 100) * ingInfo.cals; });
+                    selectedRecipe.ingredients.forEach(ing => { 
+                        const ingInfo = ingredientDB[ing.name]; 
+                        if (ingInfo) {
+                            baseCals += (ing.baseQty / 100) * ingInfo.cals; 
+                        }
+                    });
+                    
                     const adjustmentFactor = baseCals > 0 ? mealTargetCals / baseCals : 1;
-                    const adjustedIngredients = mealTemplate.ingredients.map(ing => ({ name: ing.name, qty: Math.round(ing.baseQty * adjustmentFactor) }));
-                    adjustedMeals[mealType] = { name: mealTemplate.name, ingredients: adjustedIngredients };
+                    const adjustedIngredients = selectedRecipe.ingredients.map(ing => ({ 
+                        name: ing.name, 
+                        qty: Math.round(ing.baseQty * adjustmentFactor) 
+                    }));
+                    
+                    adjustedMeals[mealType] = { 
+                        name: selectedRecipe.name, 
+                        ingredients: adjustedIngredients 
+                    };
                 });
-                if (!hasDinner) adjustedMeals.cena = { name: 'Sin cena', ingredients: [] };
+                
+                if (!hasDinner) {
+                    adjustedMeals.cena = { name: 'Sin cena', ingredients: [] };
+                }
+                
                 menu[day] = adjustedMeals;
             });
+            
+            console.log("=== MENÚ GENERADO ===");
+            console.log("Uso de alimentos favoritos:", favoriteFoodUsage);
+            console.log("Recetas usadas:", Array.from(usedRecipes));
+            console.log("Día de libre elección:", freeChoiceDay);
+            console.log("Menú final:", menu);
+            
             return menu;
         }
 
         function displayWeeklyMenu(menu) {
-            const days = Object.keys(menu);
+            console.log("Displaying weekly menu:", menu);
+            
+            if (!menu || Object.keys(menu).length === 0) {
+                console.error("Menu is empty or undefined");
+                DOMElements.menuTable.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No hay menú generado</td></tr>';
+                return;
+            }
+            
+            // Ordenar los días correctamente
+            const weekOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const days = weekOrder.filter(day => menu[day]);
             const mealTypes = ['desayuno', 'comida', 'cena'];
+            
+            console.log("Days (ordered):", days);
+            console.log("Meal types:", mealTypes);
+            
             let headHTML = '<thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comida</th>';
             days.forEach(day => headHTML += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${day}</th>`);
             headHTML += '</tr></thead>';
+            
             let bodyHTML = '<tbody class="bg-white divide-y divide-gray-200">';
             mealTypes.forEach(meal => {
                 bodyHTML += `<tr><td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900 capitalize">${meal}</td>`;
                 days.forEach(day => {
                     const recipe = menu[day][meal];
-                    if (recipe.name === 'Sin cena') {
-                         bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">${recipe.name}</td>`;
+                    console.log(`Recipe for ${day} ${meal}:`, recipe);
+                    
+                    if (!recipe) {
+                        bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">Error</td>`;
+                    } else if (recipe.name === 'Sin cena') {
+                        bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">${recipe.name}</td>`;
+                    } else if (recipe.name.includes('Libre elección')) {
+                        bodyHTML += `<td class="px-6 py-4 text-sm text-green-600 font-medium bg-green-50 rounded-lg">
+                            <div class="font-semibold">${recipe.name}</div>
+                            <div class="text-xs text-green-500 mt-1">¡Elige lo que quieras!</div>
+                        </td>`;
                     } else {
-                         bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-700 font-medium meal-cell" onclick="showRecipeModal('${day}', '${meal}')">${recipe.name}</td>`;
+                        // Mostrar nombre de la receta con ingredientes y cantidades + botón de editar
+                        const ingredientsList = recipe.ingredients.map(ing => `${ing.qty}g ${ing.name}`).join(', ');
+                        bodyHTML += `<td class="px-6 py-4 text-sm text-indigo-700 font-medium meal-cell cursor-pointer hover:bg-gray-50" onclick="showRecipeModal('${day}', '${meal}')">
+                            <div class="font-semibold">${recipe.name}</div>
+                            <div class="text-xs text-gray-600 mt-1">${ingredientsList}</div>
+                            <button class="mt-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" onclick="event.stopPropagation(); editMeal('${day}', '${meal}')">
+                                ✏️ Cambiar
+                            </button>
+                        </td>`;
                     }
                 });
                 bodyHTML += '</tr>';
             });
             bodyHTML += '</tbody>';
+            
+            console.log("Generated HTML:", headHTML + bodyHTML);
             DOMElements.menuTable.innerHTML = headHTML + bodyHTML;
         }
         
@@ -673,7 +1141,21 @@
             const meal = weeklyMenu[day][mealType];
             if (!meal || meal.name === 'Sin cena') return;
             DOMElements.modalRecipeName.textContent = meal.name;
-            DOMElements.modalIngredientsList.innerHTML = meal.ingredients.map(ing => `<li>${ing.qty}g de ${ing.name}</li>`).join('');
+            
+            // Mostrar ingredientes con cantidades formateadas
+            const ingredientsHTML = meal.ingredients.map(ing => {
+                let displayQuantity;
+                if (ing.qty >= 1000) {
+                    displayQuantity = `${(ing.qty / 1000).toFixed(1)} kg`;
+                } else if (ing.qty >= 100) {
+                    displayQuantity = `${(ing.qty / 100).toFixed(1)} unidades`;
+                } else {
+                    displayQuantity = `${ing.qty} g`;
+                }
+                return `<li class="py-1"><span class="font-medium text-blue-600">${displayQuantity}</span> de ${ing.name}</li>`;
+            }).join('');
+            
+            DOMElements.modalIngredientsList.innerHTML = ingredientsHTML;
             DOMElements.aiRecipeOutput.classList.add('hidden');
             DOMElements.recipeText.innerHTML = '';
             const newBtn = DOMElements.generateRecipeAIBtn.cloneNode(true);
@@ -683,25 +1165,125 @@
             DOMElements.recipeModal.classList.remove('hidden');
         };
 
+        window.editMeal = (day, mealType) => {
+            currentEditDay = day;
+            currentEditMeal = mealType;
+            
+            const currentMeal = weeklyMenu[day][mealType];
+            DOMElements.editModalTitle.textContent = `Cambiar ${mealType} del ${day}`;
+            
+            // Cargar opciones de recetas para este tipo de comida
+            const availableRecipes = recipeTemplates[mealType] || [];
+            DOMElements.newRecipeSelect.innerHTML = '<option value="">Selecciona una receta...</option>';
+            
+            availableRecipes.forEach((recipe, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = recipe.name;
+                DOMElements.newRecipeSelect.appendChild(option);
+            });
+            
+            DOMElements.newRecipePreview.classList.add('hidden');
+            DOMElements.editMealModal.classList.remove('hidden');
+        };
+
+        function showRecipePreview(recipeIndex, mealType) {
+            const recipe = recipeTemplates[mealType][recipeIndex];
+            if (!recipe) return;
+            
+            const ingredientsList = recipe.ingredients.map(ing => `${ing.baseQty}g ${ing.name}`).join(', ');
+            
+            DOMElements.previewContent.innerHTML = `
+                <div class="font-semibold text-gray-800">${recipe.name}</div>
+                <div class="text-sm text-gray-600 mt-1">${ingredientsList}</div>
+            `;
+            DOMElements.newRecipePreview.classList.remove('hidden');
+        }
+
+        async function applyMealChange() {
+            if (!currentEditDay || !currentEditMeal) return;
+            
+            const selectedIndex = DOMElements.newRecipeSelect.value;
+            if (!selectedIndex) {
+                alert('Por favor selecciona una receta');
+                return;
+            }
+            
+            const newRecipe = recipeTemplates[currentEditMeal][selectedIndex];
+            if (!newRecipe) return;
+            
+            // Calcular cantidades ajustadas según los macros del usuario
+            const mealTargetCals = userMacros.target / 3; // Asumiendo 3 comidas por día
+            let baseCals = 0;
+            newRecipe.ingredients.forEach(ing => {
+                const ingInfo = ingredientDB[ing.name];
+                if (ingInfo) {
+                    baseCals += (ing.baseQty / 100) * ingInfo.cals;
+                }
+            });
+            
+            const adjustmentFactor = baseCals > 0 ? mealTargetCals / baseCals : 1;
+            const adjustedIngredients = newRecipe.ingredients.map(ing => ({
+                name: ing.name,
+                qty: Math.round(ing.baseQty * adjustmentFactor)
+            }));
+            
+            // Aplicar el cambio
+            weeklyMenu[currentEditDay][currentEditMeal] = {
+                name: newRecipe.name,
+                ingredients: adjustedIngredients
+            };
+            
+            // Actualizar la visualización
+            displayWeeklyMenu(weeklyMenu);
+            displayShoppingList(weeklyMenu);
+            displayDashboard();
+            
+            // Guardar en Firebase
+            await saveUserPlans(weeklyMenu, weeklyWorkout);
+            
+            // Cerrar modal
+            DOMElements.editMealModal.classList.add('hidden');
+            
+            alert('¡Comida cambiada exitosamente!');
+        }
+
         function displayShoppingList(menu) {
             const aggregatedList = {};
             for (const day in menu) {
                 for (const meal in menu[day]) {
-                    menu[day][meal].ingredients.forEach(ing => {
-                        if (aggregatedList[ing.name]) {
-                            aggregatedList[ing.name] += ing.qty;
-                        } else {
-                            aggregatedList[ing.name] = ing.qty;
-                        }
-                    });
+                    if (menu[day][meal].ingredients) {
+                        menu[day][meal].ingredients.forEach(ing => {
+                            if (aggregatedList[ing.name]) {
+                                aggregatedList[ing.name] += ing.qty;
+                            } else {
+                                aggregatedList[ing.name] = ing.qty;
+                            }
+                        });
+                    }
                 }
             }
+            
             let listHTML = '';
             for (const item in aggregatedList) {
-                const quantity = Number.isInteger(aggregatedList[item]) ? aggregatedList[item] : aggregatedList[item].toFixed(1);
-                listHTML += `<div><span class="font-medium">${item}:</span> ${quantity} g</div>`;
+                const quantity = aggregatedList[item];
+                let displayQuantity;
+                
+                // Convertir a unidades más legibles
+                if (quantity >= 1000) {
+                    displayQuantity = `${(quantity / 1000).toFixed(1)} kg`;
+                } else if (quantity >= 100) {
+                    displayQuantity = `${(quantity / 100).toFixed(1)} unidades`;
+                } else {
+                    displayQuantity = `${quantity} g`;
+                }
+                
+                listHTML += `<div class="bg-white p-2 rounded border">
+                    <span class="font-medium text-gray-800">${item}</span>
+                    <span class="text-blue-600 font-semibold ml-2">${displayQuantity}</span>
+                </div>`;
             }
-            DOMElements.shoppingList.innerHTML = listHTML || '<p>No hay items en la lista.</p>';
+            DOMElements.shoppingList.innerHTML = listHTML || '<p class="text-gray-500">No hay items en la lista.</p>';
         }
 
         function assignWorkout() {
@@ -780,29 +1362,477 @@
         }
 
         DOMElements.downloadPdfBtn.addEventListener('click', () => {
-             if (!weeklyMenu || !userMacros || !weeklyWorkout) { alert("Primero genera un plan completo para poder descargarlo."); return; }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFontSize(18); doc.text("Plan Nutricional Semanal", 14, 22);
-            doc.setFontSize(11); doc.setTextColor(100); doc.text(`Objetivo: ${userMacros.target} kcal/día (${userMacros.protein}g P, ${userMacros.fat}g G, ${userMacros.carbs}g C)`, 14, 30);
-            autoTable(doc, { html: '#menu-table', startY: 35, headStyles: { fillColor: [79, 70, 229] } });
-            let finalY = doc.lastAutoTable.finalY + 10;
-            doc.setFontSize(16); doc.text("Lista de la Compra", 14, finalY);
-            autoTable(doc, { startY: finalY + 5, body: Array.from(document.getElementById('shopping-list').children).map(child => [child.innerText.split(':')[0], child.innerText.split(':')[1]]), theme: 'grid' });
-            doc.addPage();
-            doc.setFontSize(18); doc.text("Plan de Entrenamiento Semanal", 14, 22);
-            doc.setFontSize(14); doc.setTextColor(100); doc.text(weeklyWorkout.name, 14, 30);
-            let workoutY = 40;
-            for(const day in weeklyWorkout.schedule) {
-                const workoutName = weeklyWorkout.schedule[day];
-                const isRestDay = workoutName === 'Descanso';
-                doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.text(day, 14, workoutY);
+            try {
+                if (!weeklyMenu || !userMacros || !weeklyWorkout) { 
+                    alert("Primero genera un plan completo para poder descargarlo."); 
+                    return; 
+                }
+                
+                console.log("Iniciando descarga de PDF...");
+                
+                // Verificar que las librerías están cargadas
+                if (!window.jspdf) {
+                    alert("Error: Librería jsPDF no está cargada. Recarga la página e intenta de nuevo.");
+                    return;
+                }
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('landscape'); // Orientación horizontal
+                
+                // Página 1: Plan Nutricional
+                doc.setFontSize(18); 
+                doc.text("Plan Nutricional Semanal", 14, 22);
+                doc.setFontSize(11); 
+                doc.setTextColor(100); 
+                doc.text(`Objetivo: ${userMacros.target} kcal/día (${userMacros.protein}g P, ${userMacros.fat}g G, ${userMacros.carbs}g C)`, 14, 30);
+                
+                // Crear tabla del menú manualmente
+                const menuData = [];
+                const weekOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+                const mealTypes = ['desayuno', 'comida', 'cena'];
+                
+                // Encabezados
+                menuData.push(['Comida', ...weekOrder]);
+                
+                // Datos de cada comida
+                mealTypes.forEach(meal => {
+                    const row = [meal.charAt(0).toUpperCase() + meal.slice(1)];
+                    weekOrder.forEach(day => {
+                        if (weeklyMenu[day] && weeklyMenu[day][meal]) {
+                            const recipe = weeklyMenu[day][meal];
+                            if (recipe.name.includes('Libre elección')) {
+                                row.push('🍽️ Libre elección');
+                            } else if (recipe.name === 'Sin cena') {
+                                row.push('Sin cena');
+                            } else {
+                                row.push(recipe.name);
+                            }
+                        } else {
+                            row.push('');
+                        }
+                    });
+                    menuData.push(row);
+                });
+                
+                // Crear tabla del menú mejorada
+                console.log("Creando tabla del menú mejorada...");
+                
+                // Función para ajustar texto a múltiples líneas
+                function wrapText(text, maxWidth) {
+                    const words = text.split(' ');
+                    const lines = [];
+                    let currentLine = '';
+                    
+                    words.forEach(word => {
+                        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                        if (testLine.length <= maxWidth) {
+                            currentLine = testLine;
+                        } else {
+                            if (currentLine) {
+                                lines.push(currentLine);
+                                currentLine = word;
+                            } else {
+                                // Si una palabra es muy larga, la cortamos
+                                lines.push(word.substring(0, maxWidth - 3) + '...');
+                                currentLine = '';
+                            }
+                        }
+                    });
+                    
+                    if (currentLine) {
+                        lines.push(currentLine);
+                    }
+                    
+                    return lines.slice(0, 3); // Máximo 3 líneas
+                }
+                
+                const tableStartY = 30;
+                const tableStartX = 15;
+                const colWidth = 35; // Ancho reducido para evitar solapamiento
+                const rowHeight = 20; // Alto reducido
+                const headerHeight = 20; // Alto del encabezado reducido
+                
+                // Colores
+                const headerColor = [79, 70, 229]; // Indigo
+                const borderColor = [200, 200, 200]; // Gris claro
+                const textColor = [50, 50, 50]; // Gris oscuro
+                const freeChoiceColor = [34, 197, 94]; // Verde
+                
+                // Dibujar encabezado
+                doc.setFillColor(headerColor[0], headerColor[1], headerColor[2]);
+                doc.rect(tableStartX, tableStartY, colWidth * 8, headerHeight, 'F');
+                
+                // Texto del encabezado
+                doc.setTextColor(255, 255, 255); // Blanco
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                
+                const headers = ['Comida', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+                headers.forEach((header, index) => {
+                    const x = tableStartX + (index * colWidth) + 3;
+                    const y = tableStartY + 12;
+                    doc.text(header, x, y);
+                });
+                
+                // Dibujar filas de datos
+                doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+                doc.setFontSize(8);
                 doc.setFont(undefined, 'normal');
-                if(isRestDay) { doc.setTextColor(34, 197, 94); doc.text("Día de Descanso", 20, workoutY + 5); doc.setTextColor(0, 0, 0); workoutY += 12; }
-                else { const exercises = workoutDB.workouts[workoutName]; let exerciseText = exercises.map(ex => `${ex.ex}: ${ex.sets}`).join('\n'); doc.setFontSize(10); doc.text(exerciseText, 20, workoutY + 5); workoutY += 8 + (exercises.length * 5); }
-                if (workoutY > 260) { doc.addPage(); workoutY = 20; }
+                
+                const mealTypesForTable = ['Desayuno', 'Comida', 'Cena'];
+                mealTypesForTable.forEach((meal, mealIndex) => {
+                    const rowY = tableStartY + headerHeight + (mealIndex * rowHeight);
+                    
+                    // Fondo alternado para filas
+                    if (mealIndex % 2 === 0) {
+                        doc.setFillColor(248, 250, 252); // Gris muy claro
+                        doc.rect(tableStartX, rowY, colWidth * 8, rowHeight, 'F');
+                    }
+                    
+                    // Nombre de la comida
+                    doc.setFont(undefined, 'bold');
+                    doc.text(meal, tableStartX + 3, rowY + 10);
+                    doc.setFont(undefined, 'normal');
+                    
+                    // Datos de cada día
+                    weekOrder.forEach((day, dayIndex) => {
+                        const cellX = tableStartX + ((dayIndex + 1) * colWidth) + 3;
+                        const cellY = rowY + 10;
+                        
+                        if (weeklyMenu[day] && weeklyMenu[day][meal.toLowerCase()]) {
+                            const recipe = weeklyMenu[day][meal.toLowerCase()];
+                            let recipeText = '';
+                            let currentTextColor = [50, 50, 50]; // Color por defecto
+                            
+                            if (recipe.name.includes('Libre elección')) {
+                                recipeText = '🍽️ Libre elección';
+                                currentTextColor = freeChoiceColor;
+                            } else if (recipe.name === 'Sin cena') {
+                                recipeText = 'Sin cena';
+                                currentTextColor = [150, 150, 150]; // Gris
+                            } else {
+                                recipeText = recipe.name;
+                            }
+                            
+                            // Ajustar texto para que quepa en la celda
+                            const maxCharsPerLine = 20;
+                            const textLines = wrapText(recipeText, maxCharsPerLine);
+                            
+                            // Dibujar cada línea del texto
+                            textLines.forEach((line, lineIndex) => {
+                                const lineY = cellY + (lineIndex * 4); // 4 puntos entre líneas
+                                if (lineY < rowY + rowHeight - 2) { // Verificar que no se salga de la celda
+                                    doc.text(line, cellX, lineY);
+                                }
+                            });
+                            
+                            doc.setTextColor(currentTextColor[0], currentTextColor[1], currentTextColor[2]);
+                            doc.text(recipeText, cellX, cellY);
+                        }
+                    });
+                });
+                
+                // Dibujar bordes de la tabla
+                doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+                doc.setLineWidth(0.8);
+                
+                // Borde exterior
+                doc.rect(tableStartX, tableStartY, colWidth * 8, headerHeight + (mealTypesForTable.length * rowHeight));
+                
+                // Líneas verticales
+                for (let i = 1; i <= 8; i++) {
+                    doc.line(tableStartX + (i * colWidth), tableStartY, 
+                            tableStartX + (i * colWidth), tableStartY + headerHeight + (mealTypesForTable.length * rowHeight));
+                }
+                
+                // Líneas horizontales
+                doc.line(tableStartX, tableStartY + headerHeight, 
+                        tableStartX + (colWidth * 8), tableStartY + headerHeight);
+                
+                for (let i = 1; i <= mealTypesForTable.length; i++) {
+                    doc.line(tableStartX, tableStartY + headerHeight + (i * rowHeight), 
+                            tableStartX + (colWidth * 8), tableStartY + headerHeight + (i * rowHeight));
+                }
+                
+                console.log("Tabla del menú mejorada creada");
+                
+                let finalY = tableStartY + headerHeight + (mealTypesForTable.length * rowHeight) + 30;
+                
+                // Lista de la compra mejorada
+                doc.setFontSize(16); 
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(50, 50, 50);
+                doc.text("🛒 Lista de la Compra", 14, finalY);
+                
+                const aggregatedList = {};
+                for (const day in weeklyMenu) {
+                    for (const meal in weeklyMenu[day]) {
+                        if (weeklyMenu[day][meal].ingredients) {
+                            weeklyMenu[day][meal].ingredients.forEach(ing => {
+                                if (aggregatedList[ing.name]) {
+                                    aggregatedList[ing.name] += ing.qty;
+                                } else {
+                                    aggregatedList[ing.name] = ing.qty;
+                                }
+                            });
+                        }
+                    }
+                }
+                
+                // Crear tabla de lista de la compra
+                const shoppingStartY = finalY + 15;
+                const shoppingColWidth = 120; // Ancho reducido
+                const shoppingRowHeight = 10;
+                let shoppingY = shoppingStartY;
+                let col = 0;
+                const maxCols = 2; // 2 columnas
+                
+                // Título de columnas
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(79, 70, 229); // Indigo
+                doc.text("Producto", 20, shoppingY);
+                doc.text("Cantidad", 20 + shoppingColWidth, shoppingY);
+                shoppingY += 5;
+                
+                // Línea separadora
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.5);
+                doc.line(20, shoppingY, 20 + (shoppingColWidth * maxCols), shoppingY);
+                shoppingY += 5;
+                
+                // Items de la lista
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(50, 50, 50);
+                
+                for (const item in aggregatedList) {
+                    const quantity = aggregatedList[item];
+                    let displayQuantity;
+                    
+                    if (quantity >= 1000) {
+                        displayQuantity = `${(quantity / 1000).toFixed(1)} kg`;
+                    } else if (quantity >= 100) {
+                        displayQuantity = `${(quantity / 100).toFixed(1)} unidades`;
+                    } else {
+                        displayQuantity = `${quantity} g`;
+                    }
+                    
+                    // Reducir texto para evitar solapamiento
+                    let itemText = item;
+                    if (itemText.length > 30) {
+                        itemText = itemText.substring(0, 27) + '...';
+                    }
+                    
+                    doc.text(`☐ ${itemText}`, 20, shoppingY);
+                    doc.setTextColor(79, 70, 229); // Azul para cantidades
+                    doc.text(displayQuantity, 20 + shoppingColWidth, shoppingY);
+                    doc.setTextColor(50, 50, 50); // Volver al color normal
+                    
+                    shoppingY += shoppingRowHeight;
+                    
+                    // Si llegamos al final de la página, agregar nueva página
+                    if (shoppingY > 250) {
+                        doc.addPage();
+                        shoppingY = 20;
+                    }
+                }
+                
+                // Página 2: Plan de Entrenamiento Mejorado
+                doc.addPage('landscape'); // Mantener orientación horizontal
+                
+                // Título de la página
+                doc.setFontSize(18); 
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(50, 50, 50);
+                doc.text("💪 Plan de Entrenamiento Semanal", 14, 22);
+                
+                // Nombre del plan
+                doc.setFontSize(14); 
+                doc.setTextColor(79, 70, 229); // Indigo
+                doc.text(weeklyWorkout.name, 14, 30);
+                
+                // Crear tabla de entrenamiento
+                const workoutStartY = 35;
+                const workoutColWidth = 140; // Aprovechar mejor el espacio horizontal
+                const workoutRowHeight = 18; // Más alto
+                let workoutY = workoutStartY;
+                
+                // Encabezado de la tabla
+                doc.setFillColor(79, 70, 229); // Indigo
+                doc.rect(14, workoutY, workoutColWidth * 2, 15, 'F');
+                
+                doc.setTextColor(255, 255, 255); // Blanco
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text("Día", 20, workoutY + 10);
+                doc.text("Entrenamiento", 20 + workoutColWidth, workoutY + 10);
+                
+                workoutY += 20;
+                
+                // Datos de entrenamiento
+                doc.setTextColor(50, 50, 50);
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                
+                const weekOrderForWorkout = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+                weekOrderForWorkout.forEach((day, index) => {
+                    const workoutName = weeklyWorkout.schedule[day];
+                    const isRestDay = workoutName === 'Descanso';
+                    
+                    // Fondo alternado para filas
+                    if (index % 2 === 0) {
+                        doc.setFillColor(248, 250, 252); // Gris muy claro
+                        doc.rect(14, workoutY, workoutColWidth * 2, workoutRowHeight, 'F');
+                    }
+                    
+                    // Día
+                    doc.setFont(undefined, 'bold');
+                    doc.text(day, 20, workoutY + 8);
+                    doc.setFont(undefined, 'normal');
+                    
+                    // Entrenamiento
+                    if(isRestDay) { 
+                        doc.setTextColor(34, 197, 94); // Verde
+                        doc.text("🛌 Día de Descanso", 20 + workoutColWidth, workoutY + 8); 
+                        doc.setTextColor(50, 50, 50); // Volver al color normal
+                    } else { 
+                        doc.text(workoutName, 20 + workoutColWidth, workoutY + 8);
+                        
+                        // Agregar ejercicios en la siguiente línea si hay espacio
+                        if (workoutY + workoutRowHeight < 250) {
+                            const exercises = workoutDB.workouts[workoutName];
+                            if (exercises && exercises.length > 0) {
+                                doc.setFontSize(7);
+                                doc.setTextColor(100, 100, 100); // Gris
+                                const exerciseText = exercises.slice(0, 3).map(ex => `${ex.ex}: ${ex.sets}`).join(', ');
+                                doc.text(exerciseText, 20 + workoutColWidth, workoutY + 15);
+                                doc.setFontSize(9);
+                                doc.setTextColor(50, 50, 50);
+                            }
+                        }
+                    }
+                    
+                    workoutY += workoutRowHeight;
+                    
+                    // Si llegamos al final de la página, agregar nueva página
+                    if (workoutY > 250) { 
+                        doc.addPage(); 
+                        workoutY = 20; 
+                    }
+                });
+                
+                // Bordes de la tabla
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.5);
+                doc.rect(14, workoutStartY, workoutColWidth * 2, workoutY - workoutStartY);
+                
+                // Línea vertical separadora
+                doc.line(14 + workoutColWidth, workoutStartY, 14 + workoutColWidth, workoutY);
+                
+                // Líneas horizontales
+                for (let i = 1; i <= weekOrderForWorkout.length; i++) {
+                    doc.line(14, workoutStartY + (i * workoutRowHeight), 
+                            14 + (workoutColWidth * 2), workoutStartY + (i * workoutRowHeight));
+                }
+                
+                // Guardar PDF
+                const fileName = `plan-fitness-${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                
+                console.log("PDF descargado exitosamente:", fileName);
+                alert("✅ PDF descargado exitosamente: " + fileName);
+                
+            } catch (error) {
+                console.error("Error generando PDF:", error);
+                alert("❌ Error generando PDF: " + error.message + "\n\nIntenta recargar la página e intentar de nuevo.");
             }
-            doc.save('plan-fitness-integral.pdf');
+        });
+
+        // Función para generar el texto de la lista de la compra
+        function generateShoppingListText() {
+            if (!weeklyMenu) return '';
+            
+            const aggregatedList = {};
+            for (const day in weeklyMenu) {
+                for (const meal in weeklyMenu[day]) {
+                    if (weeklyMenu[day][meal].ingredients) {
+                        weeklyMenu[day][meal].ingredients.forEach(ing => {
+                            if (aggregatedList[ing.name]) {
+                                aggregatedList[ing.name] += ing.qty;
+                            } else {
+                                aggregatedList[ing.name] = ing.qty;
+                            }
+                        });
+                    }
+                }
+            }
+            
+            let listText = '🛒 LISTA DE LA COMPRA - PLAN FITNESS\n\n';
+            for (const item in aggregatedList) {
+                const quantity = aggregatedList[item];
+                let displayQuantity;
+                
+                if (quantity >= 1000) {
+                    displayQuantity = `${(quantity / 1000).toFixed(1)} kg`;
+                } else if (quantity >= 100) {
+                    displayQuantity = `${(quantity / 100).toFixed(1)} unidades`;
+                } else {
+                    displayQuantity = `${quantity} g`;
+                }
+                
+                listText += `☐ ${item}: ${displayQuantity}\n`;
+            }
+            
+            listText += `\n📅 Generado el: ${new Date().toLocaleDateString('es-ES')}`;
+            if (userMacros) {
+                listText += `\n🎯 Objetivo: ${userMacros.target} kcal/día`;
+            }
+            
+            return listText;
+        }
+
+        // Función para exportar a Google Keep
+        DOMElements.exportKeepBtn.addEventListener('click', () => {
+            if (!weeklyMenu) {
+                alert("Primero genera un plan para poder exportar la lista de la compra.");
+                return;
+            }
+            
+            const shoppingListText = generateShoppingListText();
+            
+            // Crear URL para Google Keep con el contenido
+            const keepUrl = `https://keep.google.com/#NOTE/${encodeURIComponent(shoppingListText)}`;
+            
+            // Abrir Google Keep en una nueva pestaña
+            window.open(keepUrl, '_blank');
+            
+            // Mostrar mensaje de éxito
+            alert("✅ Lista de la compra exportada a Google Keep\n\nSe abrirá Google Keep en una nueva pestaña. Copia y pega el contenido en una nueva nota.");
+        });
+
+        // Función para copiar la lista al portapapeles
+        DOMElements.copyListBtn.addEventListener('click', async () => {
+            if (!weeklyMenu) {
+                alert("Primero genera un plan para poder copiar la lista de la compra.");
+                return;
+            }
+            
+            const shoppingListText = generateShoppingListText();
+            
+            try {
+                await navigator.clipboard.writeText(shoppingListText);
+                alert("✅ Lista de la compra copiada al portapapeles\n\nPuedes pegarla en cualquier aplicación como Google Keep, WhatsApp, etc.");
+            } catch (err) {
+                // Fallback para navegadores que no soportan clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = shoppingListText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert("✅ Lista de la compra copiada al portapapeles\n\nPuedes pegarla en cualquier aplicación como Google Keep, WhatsApp, etc.");
+            }
         });
 
     </script>

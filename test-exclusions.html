@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Exclusiones de Alimentos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">Test de Exclusiones de Alimentos</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4">Configuración de Test</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Alimentos a excluir:</label>
+                    <input type="text" id="exclusions-input" class="w-full p-3 border border-gray-300 rounded-lg" 
+                           placeholder="Ej: brócoli, pescado, queso feta" value="brócoli">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Alimentos favoritos:</label>
+                    <input type="text" id="favorites-input" class="w-full p-3 border border-gray-300 rounded-lg" 
+                           placeholder="Ej: salmón, aguacate" value="salmón">
+                </div>
+            </div>
+            <button id="test-btn" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                Probar Exclusiones
+            </button>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4">Resultados</h2>
+            <div id="results" class="space-y-4"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold mb-4">Logs de Consola</h2>
+            <div id="logs" class="bg-gray-100 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        // Base de datos de recetas (copia de la original)
+        const recipeTemplates = { 
+            desayuno:[
+                {name:'Tostadas con Aguacate y Huevo',ingredients:[{name:'Pan integral',baseQty:80},{name:'Aguacate',baseQty:50},{name:'Huevos',baseQty:120}]},
+                {name:'Avena con Frutas y Nueces',ingredients:[{name:'Avena',baseQty:50},{name:'Nueces',baseQty:20},{name:'Yogur Griego',baseQty:100}]},
+                {name:'Smoothie de Proteína',ingredients:[{name:'Yogur Griego',baseQty:150},{name:'Avena',baseQty:30},{name:'Nueces',baseQty:15},{name:'Aguacate',baseQty:30}]},
+                {name:'Huevos Revueltos con Salmón',ingredients:[{name:'Huevos',baseQty:150},{name:'Salmón',baseQty:50},{name:'Pan integral',baseQty:60}]},
+                {name:'Bowl de Quinoa y Frutas',ingredients:[{name:'Quinoa',baseQty:60},{name:'Yogur Griego',baseQty:100},{name:'Nueces',baseQty:20}]},
+                {name:'Tostadas con Queso Feta y Tomate',ingredients:[{name:'Pan integral',baseQty:80},{name:'Queso Feta',baseQty:50},{name:'Tomate',baseQty:100},{name:'Aceite de Oliva',baseQty:5}]}
+            ],
+            comida:[
+                {name:'Pollo con Arroz y Brócoli',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Brócoli',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón con Quinoa y Espinacas',ingredients:[{name:'Salmón',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Espinacas',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Garbanzos con Aguacate',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Aguacate',baseQty:80},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},
+                {name:'Merluza con Patata y Verduras',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:150},{name:'Brócoli',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Lentejas con Arroz Integral',ingredients:[{name:'Lentejas',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Pollo a la Plancha con Quinoa',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Brócoli',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada Mediterránea con Queso Feta',ingredients:[{name:'Queso Feta',baseQty:80},{name:'Tomate',baseQty:150},{name:'Pepino',baseQty:100},{name:'Lechuga',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]}
+            ],
+            cena:[
+                {name:'Ensalada de Garbanzos',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},
+                {name:'Merluza con Patata cocida',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:200},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Salmón al Horno con Verduras',ingredients:[{name:'Salmón',baseQty:180},{name:'Brócoli',baseQty:150},{name:'Patata',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Ensalada de Aguacate y Huevo',ingredients:[{name:'Aguacate',baseQty:100},{name:'Huevos',baseQty:120},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:10}]},
+                {name:'Sopa de Lentejas',ingredients:[{name:'Lentejas',baseQty:150},{name:'Patata',baseQty:100},{name:'Espinacas',baseQty:50},{name:'Aceite de Oliva',baseQty:5}]},
+                {name:'Ensalada Griega con Queso Feta',ingredients:[{name:'Queso Feta',baseQty:80},{name:'Tomate',baseQty:120},{name:'Pepino',baseQty:100},{name:'Cebolla',baseQty:50},{name:'Aceite de Oliva',baseQty:10}]}
+            ]
+        };
+
+        function log(message) {
+            console.log(message);
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML += `<div class="text-gray-700">${new Date().toLocaleTimeString()}: ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function testExclusions() {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML = '';
+            
+            const exclusionsInput = document.getElementById('exclusions-input').value.toLowerCase();
+            const excludedFoods = exclusionsInput ? exclusionsInput.split(',').map(item => item.trim()) : [];
+            const favoritesInput = document.getElementById('favorites-input').value.toLowerCase();
+            const favoriteFoods = favoritesInput ? favoritesInput.split(',').map(item => item.trim()) : [];
+            
+            log("=== TEST DE EXCLUSIONES ===");
+            log(`Exclusiones: ${excludedFoods.join(', ')}`);
+            log(`Favoritos: ${favoriteFoods.join(', ')}`);
+            
+            // Filtrar templates excluyendo alimentos no deseados
+            const filteredTemplates = { 
+                desayuno: recipeTemplates.desayuno.filter(r => 
+                    !excludedFoods.some(ex => 
+                        r.name.toLowerCase().includes(ex) ||
+                        r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                    )
+                ), 
+                comida: recipeTemplates.comida.filter(r => 
+                    !excludedFoods.some(ex => 
+                        r.name.toLowerCase().includes(ex) ||
+                        r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                    )
+                ), 
+                cena: recipeTemplates.cena.filter(r => 
+                    !excludedFoods.some(ex => 
+                        r.name.toLowerCase().includes(ex) ||
+                        r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                    )
+                )
+            };
+            
+            log("Recetas excluidas por tipo:");
+            log(`- Desayunos: ${recipeTemplates.desayuno.length - filteredTemplates.desayuno.length}/${recipeTemplates.desayuno.length}`);
+            log(`- Comidas: ${recipeTemplates.comida.length - filteredTemplates.comida.length}/${recipeTemplates.comida.length}`);
+            log(`- Cenas: ${recipeTemplates.cena.length - filteredTemplates.cena.length}/${recipeTemplates.cena.length}`);
+            
+            // Mostrar qué recetas fueron excluidas
+            if (excludedFoods.length > 0) {
+                log("Recetas excluidas por contener:");
+                ['desayuno', 'comida', 'cena'].forEach(mealType => {
+                    const excludedRecipes = recipeTemplates[mealType].filter(r => 
+                        excludedFoods.some(ex => 
+                            r.name.toLowerCase().includes(ex) ||
+                            r.ingredients.some(ing => ing.name.toLowerCase().includes(ex))
+                        )
+                    );
+                    if (excludedRecipes.length > 0) {
+                        log(`${mealType} excluidas: ${excludedRecipes.map(r => r.name).join(', ')}`);
+                    }
+                });
+            }
+            
+            // Mostrar recetas disponibles
+            log("Recetas disponibles después de filtrado:");
+            ['desayuno', 'comida', 'cena'].forEach(mealType => {
+                log(`${mealType}: ${filteredTemplates[mealType].map(r => r.name).join(', ')}`);
+            });
+            
+            // Mostrar resultados en la interfaz
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-800">Desayunos</h3>
+                        <p class="text-sm text-blue-600">Disponibles: ${filteredTemplates.desayuno.length}/${recipeTemplates.desayuno.length}</p>
+                        <ul class="text-xs text-blue-700 mt-2 space-y-1">
+                            ${filteredTemplates.desayuno.map(r => `<li>• ${r.name}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-800">Comidas</h3>
+                        <p class="text-sm text-green-600">Disponibles: ${filteredTemplates.comida.length}/${recipeTemplates.comida.length}</p>
+                        <ul class="text-xs text-green-700 mt-2 space-y-1">
+                            ${filteredTemplates.comida.map(r => `<li>• ${r.name}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-purple-800">Cenas</h3>
+                        <p class="text-sm text-purple-600">Disponibles: ${filteredTemplates.cena.length}/${recipeTemplates.cena.length}</p>
+                        <ul class="text-xs text-purple-700 mt-2 space-y-1">
+                            ${filteredTemplates.cena.map(r => `<li>• ${r.name}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('test-btn').addEventListener('click', testExclusions);
+        
+        // Ejecutar test automáticamente al cargar
+        window.addEventListener('load', testExclusions);
+    </script>
+</body>
+</html> 
