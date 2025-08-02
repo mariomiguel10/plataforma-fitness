@@ -67,7 +67,11 @@
                 // Test 3: Firestore
                 addResult('Probando Firestore...', true);
                 const db = getFirestore(app);
-                const testCollection = collection(db, 'test');
+                const userId = userCredential.user.uid;
+                const appId = 'plataforma-fitness-app';
+                
+                // Usar la misma estructura que la aplicación principal
+                const testCollection = collection(db, `artifacts/${appId}/users/${userId}/test`);
                 const testDoc = await addDoc(testCollection, {
                     test: true,
                     timestamp: new Date()
