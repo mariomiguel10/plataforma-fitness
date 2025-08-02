@@ -461,18 +461,40 @@
         DOMElements.profileForm.addEventListener('submit', (e) => { e.preventDefault(); saveProfile(); });
         DOMElements.closeModalBtn.addEventListener('click', () => DOMElements.recipeModal.classList.add('hidden'));
         DOMElements.generateMenuBtn.addEventListener('click', async () => {
-            if (!userMacros) return;
-            const exclusionsInput = document.getElementById('exclusions').value.toLowerCase();
-            const excludedFoods = exclusionsInput ? exclusionsInput.split(',').map(item => item.trim()) : [];
-            const noDinnerDays = Array.from(document.querySelectorAll('input[name="no-dinner"]:checked')).map(cb => cb.value);
-            weeklyMenu = generateSmartWeeklyMenu(userMacros, noDinnerDays, excludedFoods);
-            weeklyWorkout = assignWorkout();
-            displayWeeklyMenu(weeklyMenu);
-            displayShoppingList(weeklyMenu);
-            displayWeeklyWorkout(weeklyWorkout);
-            displayDashboard();
-            DOMElements.planDisplaySection.classList.remove('hidden');
-            await saveUserPlans(weeklyMenu, weeklyWorkout);
+            if (!userMacros) {
+                alert("Primero necesitas crear y guardar un perfil para calcular tus macros. Completa el formulario de perfil y haz clic en 'Guardar Perfil'.");
+                return;
+            }
+            
+            try {
+                // Mostrar indicador de carga
+                DOMElements.generateMenuBtn.textContent = "Generando...";
+                DOMElements.generateMenuBtn.disabled = true;
+                
+                const exclusionsInput = document.getElementById('exclusions').value.toLowerCase();
+                const excludedFoods = exclusionsInput ? exclusionsInput.split(',').map(item => item.trim()) : [];
+                const noDinnerDays = Array.from(document.querySelectorAll('input[name="no-dinner"]:checked')).map(cb => cb.value);
+                
+                weeklyMenu = generateSmartWeeklyMenu(userMacros, noDinnerDays, excludedFoods);
+                weeklyWorkout = assignWorkout();
+                displayWeeklyMenu(weeklyMenu);
+                displayShoppingList(weeklyMenu);
+                displayWeeklyWorkout(weeklyWorkout);
+                displayDashboard();
+                DOMElements.planDisplaySection.classList.remove('hidden');
+                await saveUserPlans(weeklyMenu, weeklyWorkout);
+                
+                // Mostrar mensaje de éxito
+                alert("¡Plan generado con éxito! Revisa las pestañas de Nutrición y Entrenamiento.");
+                
+            } catch (error) {
+                console.error("Error generando plan:", error);
+                alert("Error al generar el plan. Verifica tu conexión e intenta de nuevo.");
+            } finally {
+                // Restaurar botón
+                DOMElements.generateMenuBtn.textContent = "Generar Plan Inteligente";
+                DOMElements.generateMenuBtn.disabled = false;
+            }
         });
         Object.keys(DOMElements.tabs).forEach(tabKey => {
             DOMElements.tabs[tabKey].addEventListener('click', () => {

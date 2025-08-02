@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Plataforma Fitness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">Test de Funcionalidad</h1>
+        
+        <!-- Test de Macros -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test de Cálculo de Macros</h2>
+            <button id="test-macros-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Calcular Macros de Ejemplo
+            </button>
+            <div id="macros-result" class="mt-4 p-4 bg-gray-100 rounded hidden"></div>
+        </div>
+        
+        <!-- Test de Generación de Plan -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test de Generación de Plan</h2>
+            <button id="test-plan-btn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                Generar Plan de Ejemplo
+            </button>
+            <div id="plan-result" class="mt-4 p-4 bg-gray-100 rounded hidden"></div>
+        </div>
+        
+        <!-- Test de Firebase -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Test de Firebase</h2>
+            <button id="test-firebase-btn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                Probar Conexión Firebase
+            </button>
+            <div id="firebase-result" class="mt-4 p-4 bg-gray-100 rounded hidden"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3x9G4ikDZ66xAOMH2iTlqYiJ8yKb0zgA",
+            authDomain: "plataforma-fitness-8e164.firebaseapp.com",
+            projectId: "plataforma-fitness-8e164",
+            storageBucket: "plataforma-fitness-8e164.firebasestorage.app",
+            messagingSenderId: "682757730763",
+            appId: "1:682757730763:web:87e028fb7febf36ff0064e",
+            measurementId: "G-FLRJ8YY217"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Bases de datos de ejemplo
+        const ingredientDB = { 
+            'Pechuga de Pollo':{cals:165,p:31,c:0,f:3.6},
+            'Salmón':{cals:208,p:20,c:0,f:13},
+            'Arroz Blanco':{cals:130,p:2.7,c:28,f:0.3},
+            'Brócoli':{cals:34,p:2.8,c:7,f:0.4}
+        };
+        
+        const recipeTemplates = { 
+            desayuno:[{name:'Tostadas con Aguacate y Huevo',ingredients:[{name:'Pan integral',baseQty:80},{name:'Aguacate',baseQty:50},{name:'Huevos',baseQty:120}]}],
+            comida:[{name:'Pollo con Arroz y Brócoli',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Brócoli',baseQty:150}]}],
+            cena:[{name:'Salmón con Quinoa',ingredients:[{name:'Salmón',baseQty:150},{name:'Quinoa',baseQty:70}]}]
+        };
+
+        // Test de Macros
+        document.getElementById('test-macros-btn').addEventListener('click', () => {
+            const profileData = {
+                profileName: "Test User",
+                gender: "male",
+                age: 30,
+                weight: 70,
+                height: 175,
+                activity: 1.55,
+                goal: "maintain"
+            };
+
+            let bmr = (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) + 5;
+            const maintenanceCalories = bmr * profileData.activity;
+            const targetCalories = maintenanceCalories;
+            const proteinGrams = profileData.weight * 1.8;
+            const fatCalories = targetCalories * 0.25;
+            const carbCalories = targetCalories - (proteinGrams * 4) - fatCalories;
+            
+            const macrosData = { 
+                maintenance: Math.round(maintenanceCalories), 
+                target: Math.round(targetCalories), 
+                protein: Math.round(proteinGrams), 
+                fat: Math.round(fatCalories / 9), 
+                carbs: Math.round(carbCalories / 4) 
+            };
+
+            const resultDiv = document.getElementById('macros-result');
+            resultDiv.innerHTML = `
+                <h3 class="font-semibold mb-2">Macros Calculados:</h3>
+                <p><strong>Mantenimiento:</strong> ${macrosData.maintenance} kcal</p>
+                <p><strong>Objetivo:</strong> ${macrosData.target} kcal</p>
+                <p><strong>Proteínas:</strong> ${macrosData.protein} g</p>
+                <p><strong>Grasas:</strong> ${macrosData.fat} g</p>
+                <p><strong>Carbohidratos:</strong> ${macrosData.carbs} g</p>
+            `;
+            resultDiv.classList.remove('hidden');
+        });
+
+        // Test de Generación de Plan
+        document.getElementById('test-plan-btn').addEventListener('click', () => {
+            const macros = { target: 2000, protein: 126, fat: 56, carbs: 200 };
+            const week = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const menu = {};
+
+            week.forEach(day => {
+                menu[day] = {
+                    desayuno: { name: 'Tostadas con Aguacate y Huevo', ingredients: [{ name: 'Pan integral', qty: 80 }, { name: 'Aguacate', qty: 50 }, { name: 'Huevos', qty: 120 }] },
+                    comida: { name: 'Pollo con Arroz y Brócoli', ingredients: [{ name: 'Pechuga de Pollo', qty: 150 }, { name: 'Arroz Blanco', qty: 70 }, { name: 'Brócoli', qty: 150 }] },
+                    cena: { name: 'Salmón con Quinoa', ingredients: [{ name: 'Salmón', qty: 150 }, { name: 'Quinoa', qty: 70 }] }
+                };
+            });
+
+            const resultDiv = document.getElementById('plan-result');
+            resultDiv.innerHTML = `
+                <h3 class="font-semibold mb-2">Plan Generado:</h3>
+                <p><strong>Días:</strong> ${week.length}</p>
+                <p><strong>Comidas por día:</strong> 3</p>
+                <p><strong>Ejemplo Lunes:</strong></p>
+                <ul class="list-disc list-inside ml-4">
+                    <li>Desayuno: ${menu['Lunes'].desayuno.name}</li>
+                    <li>Comida: ${menu['Lunes'].comida.name}</li>
+                    <li>Cena: ${menu['Lunes'].cena.name}</li>
+                </ul>
+            `;
+            resultDiv.classList.remove('hidden');
+        });
+
+        // Test de Firebase
+        document.getElementById('test-firebase-btn').addEventListener('click', async () => {
+            try {
+                const resultDiv = document.getElementById('firebase-result');
+                resultDiv.innerHTML = '<p>Conectando...</p>';
+                resultDiv.classList.remove('hidden');
+
+                // Autenticación
+                const userCredential = await signInAnonymously(auth);
+                const userId = userCredential.user.uid;
+                
+                // Guardar datos de prueba
+                const testData = {
+                    test: true,
+                    timestamp: serverTimestamp(),
+                    message: "Conexión exitosa"
+                };
+                
+                const testRef = doc(db, `artifacts/plataforma-fitness-app/users/${userId}/test`, 'connection-test');
+                await setDoc(testRef, testData);
+
+                resultDiv.innerHTML = `
+                    <h3 class="font-semibold mb-2 text-green-600">✅ Conexión Exitosa</h3>
+                    <p><strong>User ID:</strong> ${userId}</p>
+                    <p><strong>Estado:</strong> Autenticado y conectado</p>
+                    <p><strong>Base de datos:</strong> Funcionando</p>
+                `;
+            } catch (error) {
+                const resultDiv = document.getElementById('firebase-result');
+                resultDiv.innerHTML = `
+                    <h3 class="font-semibold mb-2 text-red-600">❌ Error de Conexión</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                resultDiv.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html> 
