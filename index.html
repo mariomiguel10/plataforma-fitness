@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Fitness Avanzada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-content, .result-card, #menu-generator-section {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        .hidden-section, .hidden {
+            opacity: 0; transform: translateY(20px); max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.5s ease, transform 0.5s ease, max-height 0.7s ease;
+        }
+        .visible-section { opacity: 1; transform: translateY(0); max-height: 5000px; }
+        #loader, .recipe-loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-btn.active { border-color: #4f46e5; color: #4f46e5; background-color: #eef2ff; }
+        .meal-cell { cursor: pointer; transition: background-color 0.2s ease; }
+        .meal-cell:hover { background-color: #f9fafb; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Loader -->
+    <div id="loader-overlay" class="fixed inset-0 bg-white bg-opacity-75 flex justify-center items-center z-50">
+        <div id="loader"></div>
+    </div>
+    
+    <!-- Recipe Modal -->
+    <div id="recipe-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <h2 id="modal-recipe-name" class="text-2xl font-bold mb-4 text-gray-900"></h2>
+            <div id="modal-content">
+                <h3 class="text-lg font-semibold text-gray-800">Ingredientes:</h3>
+                <ul id="modal-ingredients-list" class="list-disc list-inside my-2 text-gray-700"></ul>
+                <button id="generate-recipe-ai-btn" class="w-full mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity">
+                    ✨ Generar Receta con IA
+                </button>
+                <div id="ai-recipe-output" class="mt-4 p-4 bg-gray-50 rounded-lg hidden">
+                    <div id="recipe-loader-container" class="flex justify-center items-center py-4">
+                        <div class="recipe-loader"></div>
+                    </div>
+                    <div id="recipe-text" class="prose prose-sm max-w-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-6xl">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Plataforma de Fitness Avanzada</h1>
+            <p class="mt-2 text-gray-600">Tu centro de gestión de perfiles y planes.</p>
+            <div id="user-info" class="text-xs text-gray-400 mt-2"></div>
+        </header>
+
+        <!-- Profile Manager & Dashboard -->
+        <div id="dashboard" class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+             <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 md:mb-0">Panel de Control</h2>
+                <div class="flex items-center space-x-4">
+                    <select id="profile-switcher" class="block w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"></select>
+                    <button id="new-profile-btn" class="bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">Crear Nuevo Perfil</button>
+                </div>
+             </div>
+             <div id="dashboard-content" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t pt-6"></div>
+             <div id="dashboard-placeholder" class="text-center text-gray-500 py-8">
+                <p>Selecciona un perfil o crea uno nuevo para empezar.</p>
+            </div>
+        </div>
+
+        <!-- Profile Form / Editor -->
+        <div id="profile-editor-section" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <form id="profile-form">
+                    <h2 id="form-title" class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">Crear Nuevo Perfil</h2>
+                    <div class="space-y-4">
+                        <div><label for="profileName" class="block text-sm font-medium text-gray-700">Nombre del Perfil</label><input type="text" id="profileName" name="profileName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Ej: Juan, Mamá, Cliente A"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Género</label><div class="flex items-center space-x-4"><label class="flex items-center"><input type="radio" name="gender" value="male" class="text-blue-600 focus:ring-blue-500" checked><span class="ml-2">Hombre</span></label><label class="flex items-center"><input type="radio" name="gender" value="female" class="text-pink-600 focus:ring-pink-500"><span class="ml-2">Mujer</span></label></div></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div><label for="age" class="block text-sm font-medium text-gray-700">Edad</label><input type="number" id="age" name="age" required class="mt-1 block w-full rounded-md p-2" placeholder="años"></div>
+                            <div><label for="weight" class="block text-sm font-medium text-gray-700">Peso</label><input type="number" id="weight" name="weight" step="0.1" required class="mt-1 block w-full rounded-md p-2" placeholder="kg"></div>
+                            <div><label for="height" class="block text-sm font-medium text-gray-700">Altura</label><input type="number" id="height" name="height" required class="mt-1 block w-full rounded-md p-2" placeholder="cm"></div>
+                        </div>
+                        <div><label for="activity" class="block text-sm font-medium text-gray-700">Nivel de Actividad</label><select id="activity" name="activity" class="mt-1 block w-full rounded-md p-2"><option value="1.2">Sedentario</option><option value="1.375">Ligera</option><option value="1.55">Moderada</option><option value="1.725">Alta</option><option value="1.9">Atleta</option></select></div>
+                        <div><label for="goal" class="block text-sm font-medium text-gray-700">Objetivo</label><select id="goal" name="goal" class="mt-1 block w-full rounded-md p-2"><option value="lose">Perder Grasa</option><option value="maintain" selected>Mantener</option><option value="gain">Ganar Músculo</option></select></div>
+                    </div>
+                    <div class="mt-8"><button type="submit" id="save-profile-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Guardar Perfil</button></div>
+                </form>
+            </div>
+            <div id="results-container" class="bg-white p-6 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">Macros Objetivo</h2>
+                <div id="results-content" class="space-y-4"></div>
+                <div id="initial-message" class="text-center text-gray-500 h-full flex flex-col justify-center items-center"><svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg><p>Guarda un perfil para ver sus macros.</p></div>
+            </div>
+        </div>
+
+        <!-- Generador de Menús -->
+        <div id="menu-generator-section" class="bg-white p-6 rounded-2xl shadow-lg mt-8 hidden-section">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">2. Personaliza y Genera Plan</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div><label for="exclusions" class="block text-sm font-medium text-gray-700">Alimentos a excluir</label><input type="text" id="exclusions" name="exclusions" class="mt-1 block w-full rounded-md p-2" placeholder="Ej: brócoli, pescado..."></div>
+                <div><label class="block text-sm font-medium text-gray-700">Días sin cena</label><div id="no-dinner-days" class="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2"></div></div>
+            </div>
+            <div class="mt-8"><button id="generate-menu-btn" class="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700">Generar Plan Inteligente</button></div>
+        </div>
+
+        <!-- Display de Planes -->
+        <div id="plan-display-section" class="mt-8 hidden-section">
+            <div class="border-b border-gray-200 mb-4">
+                <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                    <button id="tab-nutrition" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">Nutrición</button>
+                    <button id="tab-workout" class="tab-btn text-gray-500 hover:text-gray-700 whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-sm">Entrenamiento</button>
+                    <button id="tab-progress" class="tab-btn text-gray-500 hover:text-gray-700 whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-sm">Progreso</button>
+                </nav>
+            </div>
+            <div id="nutrition-content" class="tab-content">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Tu Plan Semanal</h2>
+                        <button id="download-pdf-btn" class="w-full mt-4 sm:mt-0 sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>Descargar PDF</button>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Menú Semanal</h3>
+                    <div class="overflow-x-auto"><table id="menu-table" class="min-w-full divide-y divide-gray-200 border"></table></div>
+                    <h3 class="text-xl font-semibold mt-8 mb-4 text-gray-700">Lista de la Compra</h3>
+                    <div id="shopping-list" class="bg-gray-50 p-4 rounded-lg grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm"></div>
+                </div>
+            </div>
+            <div id="workout-content" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Tu Rutina Semanal</h2>
+                    <div id="workout-plan" class="space-y-6"></div>
+                 </div>
+            </div>
+            <div id="progress-content" class="tab-content hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Tu Progreso</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <form id="progress-form" class="md:col-span-1 space-y-4">
+                            <h3 class="text-lg font-medium">Registrar Peso</h3>
+                            <div><label for="progress-date" class="block text-sm font-medium text-gray-700">Fecha</label><input type="date" id="progress-date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                            <div><label for="progress-weight" class="block text-sm font-medium text-gray-700">Peso (kg)</label><input type="number" step="0.1" id="progress-weight" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700">Guardar Registro</button>
+                        </form>
+                        <div class="md:col-span-2"><canvas id="progress-chart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Firebase SDKs ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DOM Elements ---
+        const DOMElements = {
+            loaderOverlay: document.getElementById('loader-overlay'),
+            recipeModal: document.getElementById('recipe-modal'),
+            closeModalBtn: document.getElementById('close-modal-btn'),
+            modalRecipeName: document.getElementById('modal-recipe-name'),
+            modalIngredientsList: document.getElementById('modal-ingredients-list'),
+            generateRecipeAIBtn: document.getElementById('generate-recipe-ai-btn'),
+            aiRecipeOutput: document.getElementById('ai-recipe-output'),
+            recipeLoaderContainer: document.getElementById('recipe-loader-container'),
+            recipeText: document.getElementById('recipe-text'),
+            userInfo: document.getElementById('user-info'),
+            dashboard: document.getElementById('dashboard'),
+            profileSwitcher: document.getElementById('profile-switcher'),
+            newProfileBtn: document.getElementById('new-profile-btn'),
+            dashboardContent: document.getElementById('dashboard-content'),
+            dashboardPlaceholder: document.getElementById('dashboard-placeholder'),
+            profileEditorSection: document.getElementById('profile-editor-section'),
+            profileForm: document.getElementById('profile-form'),
+            formTitle: document.getElementById('form-title'),
+            saveProfileBtn: document.getElementById('save-profile-btn'),
+            resultsContainer: document.getElementById('results-container'),
+            resultsContent: document.getElementById('results-content'),
+            initialMessage: document.getElementById('initial-message'),
+            menuGeneratorSection: document.getElementById('menu-generator-section'),
+            generateMenuBtn: document.getElementById('generate-menu-btn'),
+            planDisplaySection: document.getElementById('plan-display-section'),
+            tabs: {
+                nutrition: document.getElementById('tab-nutrition'),
+                workout: document.getElementById('tab-workout'),
+                progress: document.getElementById('tab-progress'),
+            },
+            content: {
+                nutrition: document.getElementById('nutrition-content'),
+                workout: document.getElementById('workout-content'),
+                progress: document.getElementById('progress-content'),
+            },
+            downloadPdfBtn: document.getElementById('download-pdf-btn'),
+            menuTable: document.getElementById('menu-table'),
+            shoppingList: document.getElementById('shopping-list'),
+            workoutPlan: document.getElementById('workout-plan'),
+            progressForm: document.getElementById('progress-form'),
+            progressChartCanvas: document.getElementById('progress-chart'),
+        };
+
+        // --- Global State ---
+        let activeProfileId = null;
+        let profiles = new Map();
+        let userMacros = null, weeklyMenu = null, weeklyWorkout = null, progressData = [], progressChart = null;
+        let db, auth, userId, appId;
+
+        // --- Databases ---
+        const ingredientDB = { 'Pechuga de Pollo':{cals:165,p:31,c:0,f:3.6},'Salmón':{cals:208,p:20,c:0,f:13},'Merluza':{cals:89,p:16,c:0,f:2},'Huevos':{cals:155,p:13,c:1.1,f:11},'Lentejas':{cals:116,p:9,c:20,f:0.4},'Garbanzos':{cals:139,p:8,c:27,f:2.6},'Arroz Blanco':{cals:130,p:2.7,c:28,f:0.3},'Quinoa':{cals:120,p:4.1,c:21,f:1.9},'Patata':{cals:77,p:2,c:17,f:0.1},'Pan integral':{cals:247,p:13,c:41,f:3.2},'Avena':{cals:68,p:2.4,c:12,f:1.4},'Aguacate':{cals:160,p:2,c:9,f:15},'Nueces':{cals:654,p:15,c:14,f:65},'Aceite de Oliva':{cals:884,p:0,c:0,f:100},'Brócoli':{cals:34,p:2.8,c:7,f:0.4},'Espinacas':{cals:23,p:2.9,c:3.6,f:0.4},'Tomate':{cals:18,p:0.9,c:3.9,f:0.2},'Yogur Griego':{cals:59,p:10,c:3.6,f:0.4}, };
+        const recipeTemplates = { desayuno:[{name:'Tostadas con Aguacate y Huevo',ingredients:[{name:'Pan integral',baseQty:80},{name:'Aguacate',baseQty:50},{name:'Huevos',baseQty:120}]},{name:'Avena con Frutas y Nueces',ingredients:[{name:'Avena',baseQty:50},{name:'Nueces',baseQty:20},{name:'Yogur Griego',baseQty:100}]}],comida:[{name:'Pollo con Arroz y Brócoli',ingredients:[{name:'Pechuga de Pollo',baseQty:150},{name:'Arroz Blanco',baseQty:70},{name:'Brócoli',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]},{name:'Salmón con Quinoa y Espinacas',ingredients:[{name:'Salmón',baseQty:150},{name:'Quinoa',baseQty:70},{name:'Espinacas',baseQty:150},{name:'Aceite de Oliva',baseQty:10}]}],cena:[{name:'Ensalada de Garbanzos',ingredients:[{name:'Garbanzos',baseQty:150},{name:'Tomate',baseQty:100},{name:'Espinacas',baseQty:100},{name:'Aceite de Oliva',baseQty:15}]},{name:'Merluza con Patata cocida',ingredients:[{name:'Merluza',baseQty:200},{name:'Patata',baseQty:200},{name:'Aceite de Oliva',baseQty:10}]}] };
+        const workoutDB = { routines:{'3-day':{name:'Full Body - 3 Días',schedule:{'Lunes':'Día 1','Martes':'Descanso','Miércoles':'Día 2','Jueves':'Descanso','Viernes':'Día 3','Sábado':'Descanso','Domingo':'Descanso'}},'4-day':{name:'Torso/Pierna - 4 Días',schedule:{'Lunes':'Torso','Martes':'Pierna','Miércoles':'Descanso','Jueves':'Torso','Viernes':'Pierna','Sábado':'Descanso','Domingo':'Descanso'}},'5-day':{name:'Weider Frecuencia 1 - 5 Días',schedule:{'Lunes':'Pecho y Tríceps','Martes':'Espalda y Bíceps','Miércoles':'Pierna','Jueves':'Hombro','Viernes':'Full Body Ligero','Sábado':'Descanso','Domingo':'Descanso'}}},workouts:{'Día 1':[{ex:'Sentadillas',sets:'4x8-10'},{ex:'Press Banca',sets:'4x8-10'},{ex:'Remo con Barra',sets:'3x10-12'},{ex:'Press Militar',sets:'3x10-12'}],'Día 2':[{ex:'Peso Muerto',sets:'4x6-8'},{ex:'Dominadas',sets:'4xAl fallo'},{ex:'Fondos en paralelas',sets:'3x10-12'},{ex:'Zancadas',sets:'3x12-15'}],'Día 3':[{ex:'Prensa',sets:'4x12-15'},{ex:'Press Inclinado',sets:'4x10-12'},{ex:'Jalón al pecho',sets:'3x10-12'},{ex:'Elevaciones laterales',sets:'3x15-20'}],'Torso':[{ex:'Press Banca',sets:'4x8-10'},{ex:'Remo con Barra',sets:'4x8-10'},{ex:'Press Militar',sets:'3x10-12'},{ex:'Curl de Bíceps',sets:'3x12'},{ex:'Extensión Tríceps',sets:'3x12'}],'Pierna':[{ex:'Sentadillas',sets:'4x8-10'},{ex:'Peso Muerto Rumano',sets:'4x10-12'},{ex:'Prensa',sets:'3x12-15'},{ex:'Curl Femoral',sets:'3x15'},{ex:'Gemelos',sets:'4x20'}],'Pecho y Tríceps':[{ex:'Press Banca',sets:'4x8-10'},{ex:'Press Inclinado Mancuerna',sets:'3x10'},{ex:'Aperturas',sets:'3x12'},{ex:'Press Francés',sets:'3x10'},{ex:'Fondos',sets:'3xAl fallo'}],'Espalda y Bíceps':[{ex:'Dominadas',sets:'4xAl fallo'},{ex:'Remo con Barra',sets:'4x8-10'},{ex:'Remo en polea baja',sets:'3x12'},{ex:'Curl con Barra',sets:'3x10'},{ex:'Curl Martillo',sets:'3x12'}],'Hombro':[{ex:'Press Militar',sets:'4x8-10'},{ex:'Elevaciones Laterales',sets:'4x12-15'},{ex:'Pájaros',sets:'3x15'},{ex:'Face Pull',sets:'3x15'}],'Full Body Ligero':[{ex:'Sentadilla Goblet',sets:'3x15'},{ex:'Flexiones',sets:'3xAl fallo'},{ex:'Remo con mancuerna',sets:'3x12'},{ex:'Plancha',sets:'3x1 min'}]} };
+        
+        // --- Initialization ---
+        window.onload = () => {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    DOMElements.userInfo.textContent = `ID de Cuenta: ${userId}`;
+                    await loadAllProfiles();
+                } else {
+                    await signInAnonymously(auth);
+                }
+                DOMElements.loaderOverlay.style.display = 'none';
+            });
+        };
+
+        // --- Profile Management ---
+        async function loadAllProfiles() {
+            const profilesRef = collection(db, `artifacts/${appId}/users/${userId}/profiles`);
+            const q = query(profilesRef, orderBy("lastAccessed", "desc"));
+            const querySnapshot = await getDocs(q);
+            profiles.clear();
+            querySnapshot.forEach(doc => profiles.set(doc.id, doc.data()));
+            updateProfileSwitcher();
+
+            if (profiles.size > 0) {
+                const latestProfileId = profiles.keys().next().value;
+                await switchActiveProfile(latestProfileId);
+            } else {
+                clearAllData();
+                DOMElements.profileEditorSection.classList.remove('hidden');
+            }
+        }
+        
+        async function switchActiveProfile(profileId) {
+            if (!profileId || activeProfileId === profileId) return;
+            activeProfileId = profileId;
+            DOMElements.profileSwitcher.value = profileId;
+            
+            const profileRef = doc(db, `artifacts/${appId}/users/${userId}/profiles`, profileId);
+            await updateDoc(profileRef, { lastAccessed: serverTimestamp() });
+
+            await loadActiveProfileData();
+        }
+
+        function setupNewProfile() {
+            activeProfileId = null;
+            DOMElements.profileForm.reset();
+            DOMElements.formTitle.textContent = "Crear Nuevo Perfil";
+            clearAllData(false);
+            DOMElements.profileEditorSection.classList.remove('hidden');
+        }
+
+        // --- Data Handling ---
+        async function loadActiveProfileData() {
+            if (!activeProfileId) {
+                clearAllData();
+                return;
+            }
+            
+            DOMElements.profileEditorSection.classList.remove('hidden');
+            const profileData = profiles.get(activeProfileId);
+            
+            if (profileData) {
+                DOMElements.profileForm.elements.profileName.value = profileData.profile.profileName;
+                DOMElements.profileForm.elements.gender.value = profileData.profile.gender;
+                DOMElements.profileForm.elements.age.value = profileData.profile.age;
+                DOMElements.profileForm.elements.weight.value = profileData.profile.weight;
+                DOMElements.profileForm.elements.height.value = profileData.profile.height;
+                DOMElements.profileForm.elements.activity.value = profileData.profile.activity;
+                DOMElements.profileForm.elements.goal.value = profileData.profile.goal;
+                DOMElements.formTitle.textContent = `Editando Perfil: ${profileData.profile.profileName}`;
+                
+                userMacros = profileData.macros;
+                displayResults(userMacros);
+                showMenuGenerator();
+
+                const planRef = doc(db, `artifacts/${appId}/users/${userId}/profiles/${activeProfileId}/plans`, 'latest');
+                const planSnap = await getDoc(planRef);
+                if (planSnap.exists()) {
+                    weeklyMenu = planSnap.data().menu;
+                    weeklyWorkout = planSnap.data().workout;
+                    displayWeeklyMenu(weeklyMenu);
+                    displayWeeklyWorkout(weeklyWorkout);
+                    displayDashboard();
+                    DOMElements.planDisplaySection.classList.remove('hidden');
+                } else {
+                    DOMElements.planDisplaySection.classList.add('hidden');
+                    DOMElements.dashboardContent.innerHTML = '';
+                    DOMElements.dashboardPlaceholder.style.display = 'block';
+                }
+                
+                const progressRef = collection(db, `artifacts/${appId}/users/${userId}/profiles/${activeProfileId}/progress`);
+                const q = query(progressRef, orderBy("date", "asc"));
+                const progressSnap = await getDocs(q);
+                progressData = progressSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                displayProgressChart();
+            }
+        }
+
+        async function saveProfile() {
+            const profileData = {
+                profileName: DOMElements.profileForm.elements.profileName.value,
+                gender: DOMElements.profileForm.elements.gender.value,
+                age: parseInt(DOMElements.profileForm.elements.age.value),
+                weight: parseFloat(DOMElements.profileForm.elements.weight.value),
+                height: parseInt(DOMElements.profileForm.elements.height.value),
+                activity: parseFloat(DOMElements.profileForm.elements.activity.value),
+                goal: DOMElements.profileForm.elements.goal.value
+            };
+
+            if (!profileData.profileName || isNaN(profileData.age) || isNaN(profileData.weight) || isNaN(profileData.height)) {
+                alert("Por favor, completa todos los campos del perfil con valores válidos.");
+                return;
+            }
+
+            let bmr = (profileData.gender === 'male') ? (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) + 5 : (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) - 161;
+            const maintenanceCalories = bmr * profileData.activity;
+            let targetCalories;
+            if (profileData.goal === 'lose') targetCalories = maintenanceCalories * 0.80;
+            else if (profileData.goal === 'gain') targetCalories = maintenanceCalories * 1.15;
+            else targetCalories = maintenanceCalories;
+            const proteinGrams = profileData.weight * 1.8;
+            const fatCalories = targetCalories * 0.25;
+            const carbCalories = targetCalories - (proteinGrams * 4) - fatCalories;
+            const macrosData = { maintenance: Math.round(maintenanceCalories), target: Math.round(targetCalories), protein: Math.round(proteinGrams), fat: Math.round(fatCalories / 9), carbs: Math.round(carbCalories / 4) };
+
+            let docId = activeProfileId;
+            if (!docId) {
+                const newProfileRef = doc(collection(db, `artifacts/${appId}/users/${userId}/profiles`));
+                docId = newProfileRef.id;
+            }
+            
+            const profileRef = doc(db, `artifacts/${appId}/users/${userId}/profiles`, docId);
+            await setDoc(profileRef, { profile: profileData, macros: macrosData, lastAccessed: serverTimestamp() }, { merge: true });
+            
+            alert(`Perfil "${profileData.profileName}" guardado con éxito.`);
+            await loadAllProfiles();
+            await switchActiveProfile(docId);
+        }
+        
+        async function saveUserPlans(menuData, workoutData) {
+            if (!activeProfileId) return;
+            const ref = doc(db, `artifacts/${appId}/users/${userId}/profiles/${activeProfileId}/plans`, 'latest');
+            await setDoc(ref, { menu: menuData, workout: workoutData, createdAt: serverTimestamp() });
+        }
+
+        async function saveProgressEntry(date, weight) {
+            if (!activeProfileId) return;
+            const ref = collection(db, `artifacts/${appId}/users/${userId}/profiles/${activeProfileId}/progress`);
+            const newEntry = { date, weight: parseFloat(weight), createdAt: serverTimestamp() };
+            const docRef = await addDoc(ref, newEntry);
+            progressData.push({ ...newEntry, id: docRef.id });
+            progressData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            displayProgressChart();
+        }
+
+        // --- Event Listeners ---
+        DOMElements.profileSwitcher.addEventListener('change', (e) => switchActiveProfile(e.target.value));
+        DOMElements.newProfileBtn.addEventListener('click', setupNewProfile);
+        DOMElements.profileForm.addEventListener('submit', (e) => { e.preventDefault(); saveProfile(); });
+        DOMElements.closeModalBtn.addEventListener('click', () => DOMElements.recipeModal.classList.add('hidden'));
+        DOMElements.generateMenuBtn.addEventListener('click', async () => {
+            if (!userMacros) return;
+            const exclusionsInput = document.getElementById('exclusions').value.toLowerCase();
+            const excludedFoods = exclusionsInput ? exclusionsInput.split(',').map(item => item.trim()) : [];
+            const noDinnerDays = Array.from(document.querySelectorAll('input[name="no-dinner"]:checked')).map(cb => cb.value);
+            weeklyMenu = generateSmartWeeklyMenu(userMacros, noDinnerDays, excludedFoods);
+            weeklyWorkout = assignWorkout();
+            displayWeeklyMenu(weeklyMenu);
+            displayShoppingList(weeklyMenu);
+            displayWeeklyWorkout(weeklyWorkout);
+            displayDashboard();
+            DOMElements.planDisplaySection.classList.remove('hidden');
+            await saveUserPlans(weeklyMenu, weeklyWorkout);
+        });
+        Object.keys(DOMElements.tabs).forEach(tabKey => {
+            DOMElements.tabs[tabKey].addEventListener('click', () => {
+                Object.keys(DOMElements.tabs).forEach(k => {
+                    DOMElements.tabs[k].classList.remove('active');
+                    DOMElements.content[k].classList.add('hidden');
+                });
+                DOMElements.tabs[tabKey].classList.add('active');
+                DOMElements.content[tabKey].classList.remove('hidden');
+            });
+        });
+        DOMElements.progressForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const date = DOMElements.progressForm.elements['progress-date'].value;
+            const weight = DOMElements.progressForm.elements['progress-weight'].value;
+            if (date && weight) {
+                await saveProgressEntry(date, weight);
+                DOMElements.progressForm.reset();
+            }
+        });
+
+        // --- AI Recipe Generation ---
+        async function generateRecipeWithAI(mealName, ingredientsList) {
+            DOMElements.aiRecipeOutput.classList.remove('hidden');
+            DOMElements.recipeLoaderContainer.classList.remove('hidden');
+            DOMElements.recipeText.classList.add('hidden');
+            const ingredientsString = ingredientsList.map(ing => `${ing.qty}g de ${ing.name}`).join(', ');
+            const prompt = `Eres un chef experto. Crea una receta sencilla y saludable llamada '${mealName}' usando exactamente los siguientes ingredientes y cantidades: ${ingredientsString}. Proporciona los pasos de preparación de forma clara y concisa, usando Markdown para los títulos y las listas.`;
+            try {
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                const result = await response.json();
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar la receta. Inténtalo de nuevo.";
+                DOMElements.recipeText.innerHTML = text.replace(/\n/g, '<br>');
+            } catch (error) {
+                console.error("Error generating recipe:", error);
+                DOMElements.recipeText.textContent = "Hubo un error al generar la receta. Por favor, revisa la consola para más detalles.";
+            } finally {
+                DOMElements.recipeLoaderContainer.classList.add('hidden');
+                DOMElements.recipeText.classList.remove('hidden');
+            }
+        }
+        
+        // --- UI Functions ---
+        function updateProfileSwitcher() {
+            const switcher = DOMElements.profileSwitcher;
+            switcher.innerHTML = '';
+            if (profiles.size === 0) {
+                switcher.innerHTML = '<option>No hay perfiles</option>';
+                return;
+            }
+            profiles.forEach((data, id) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = data.profile.profileName;
+                switcher.appendChild(option);
+            });
+        }
+
+        function clearAllData(hideForm = true) {
+            DOMElements.dashboardContent.innerHTML = '';
+            DOMElements.dashboardPlaceholder.style.display = 'block';
+            DOMElements.resultsContent.innerHTML = '';
+            DOMElements.initialMessage.style.display = 'flex';
+            DOMElements.menuGeneratorSection.classList.remove('visible-section');
+            DOMElements.planDisplaySection.classList.add('hidden');
+            if (progressChart) progressChart.destroy();
+            if(hideForm) DOMElements.profileEditorSection.classList.add('hidden');
+        }
+
+        function displayResults(data) {
+            DOMElements.initialMessage.style.display = 'none';
+            DOMElements.resultsContainer.classList.remove('opacity-0', 'translate-y-5');
+            DOMElements.resultsContent.innerHTML = `<div class="bg-gray-100 p-4 rounded-lg"><p class="text-sm text-gray-600">Mantenimiento</p><p class="text-2xl font-bold text-gray-800">${data.maintenance} kcal</p></div><div class="bg-indigo-100 p-4 rounded-lg border border-indigo-200"><p class="text-sm text-indigo-800">Objetivo</p><p class="text-3xl font-bold text-indigo-900">${data.target} kcal</p></div><div class="mt-6"><h3 class="text-lg font-semibold mb-3">Macros</h3><div class="space-y-3"><div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg"><span>Proteínas</span><span class="font-bold text-lg">${data.protein} g</span></div><div class="flex justify-between items-center bg-yellow-50 p-3 rounded-lg"><span>Grasas</span><span class="font-bold text-lg">${data.fat} g</span></div><div class="flex justify-between items-center bg-green-50 p-3 rounded-lg"><span>Carbs</span><span class="font-bold text-lg">${data.carbs} g</span></div></div></div>`;
+        }
+
+        function showMenuGenerator() {
+            const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            document.getElementById('no-dinner-days').innerHTML = days.map(day => `<label class="flex items-center text-sm"><input type="checkbox" name="no-dinner" value="${day}" class="rounded text-indigo-600 focus:ring-indigo-500"><span class="ml-2">${day.substring(0,3)}</span></label>`).join('');
+            DOMElements.menuGeneratorSection.classList.add('visible-section');
+        }
+
+        function generateSmartWeeklyMenu(macros, noDinnerDays, exclusions) {
+            const week = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const menu = {};
+            const filteredTemplates = { desayuno: recipeTemplates.desayuno.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), comida: recipeTemplates.comida.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), cena: recipeTemplates.cena.filter(r => !exclusions.some(ex => r.name.toLowerCase().includes(ex))), };
+            week.forEach(day => {
+                const hasDinner = !noDinnerDays.includes(day);
+                const mealSlots = hasDinner ? ['desayuno', 'comida', 'cena'] : ['desayuno', 'comida'];
+                const dailyMacrosTarget = { cals: macros.target, p: macros.protein, c: macros.carbs, f: macros.fat };
+                const dayTemplates = { desayuno: filteredTemplates.desayuno[Math.floor(Math.random() * filteredTemplates.desayuno.length)], comida: filteredTemplates.comida[Math.floor(Math.random() * filteredTemplates.comida.length)], cena: hasDinner && filteredTemplates.cena.length > 0 ? filteredTemplates.cena[Math.floor(Math.random() * filteredTemplates.cena.length)] : { name: 'Sin cena', ingredients: [] } };
+                const adjustedMeals = {};
+                mealSlots.forEach((mealType) => {
+                    const mealTemplate = dayTemplates[mealType];
+                    const mealTargetCals = dailyMacrosTarget.cals / mealSlots.length;
+                    let baseCals = 0;
+                    mealTemplate.ingredients.forEach(ing => { const ingInfo = ingredientDB[ing.name]; baseCals += (ing.baseQty / 100) * ingInfo.cals; });
+                    const adjustmentFactor = baseCals > 0 ? mealTargetCals / baseCals : 1;
+                    const adjustedIngredients = mealTemplate.ingredients.map(ing => ({ name: ing.name, qty: Math.round(ing.baseQty * adjustmentFactor) }));
+                    adjustedMeals[mealType] = { name: mealTemplate.name, ingredients: adjustedIngredients };
+                });
+                if (!hasDinner) adjustedMeals.cena = { name: 'Sin cena', ingredients: [] };
+                menu[day] = adjustedMeals;
+            });
+            return menu;
+        }
+
+        function displayWeeklyMenu(menu) {
+            const days = Object.keys(menu);
+            const mealTypes = ['desayuno', 'comida', 'cena'];
+            let headHTML = '<thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comida</th>';
+            days.forEach(day => headHTML += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${day}</th>`);
+            headHTML += '</tr></thead>';
+            let bodyHTML = '<tbody class="bg-white divide-y divide-gray-200">';
+            mealTypes.forEach(meal => {
+                bodyHTML += `<tr><td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900 capitalize">${meal}</td>`;
+                days.forEach(day => {
+                    const recipe = menu[day][meal];
+                    if (recipe.name === 'Sin cena') {
+                         bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">${recipe.name}</td>`;
+                    } else {
+                         bodyHTML += `<td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-700 font-medium meal-cell" onclick="showRecipeModal('${day}', '${meal}')">${recipe.name}</td>`;
+                    }
+                });
+                bodyHTML += '</tr>';
+            });
+            bodyHTML += '</tbody>';
+            DOMElements.menuTable.innerHTML = headHTML + bodyHTML;
+        }
+        
+        window.showRecipeModal = (day, mealType) => {
+            const meal = weeklyMenu[day][mealType];
+            if (!meal || meal.name === 'Sin cena') return;
+            DOMElements.modalRecipeName.textContent = meal.name;
+            DOMElements.modalIngredientsList.innerHTML = meal.ingredients.map(ing => `<li>${ing.qty}g de ${ing.name}</li>`).join('');
+            DOMElements.aiRecipeOutput.classList.add('hidden');
+            DOMElements.recipeText.innerHTML = '';
+            const newBtn = DOMElements.generateRecipeAIBtn.cloneNode(true);
+            DOMElements.generateRecipeAIBtn.parentNode.replaceChild(newBtn, DOMElements.generateRecipeAIBtn);
+            DOMElements.generateRecipeAIBtn = newBtn;
+            newBtn.addEventListener('click', () => generateRecipeWithAI(meal.name, meal.ingredients));
+            DOMElements.recipeModal.classList.remove('hidden');
+        };
+
+        function displayShoppingList(menu) {
+            const aggregatedList = {};
+            for (const day in menu) {
+                for (const meal in menu[day]) {
+                    menu[day][meal].ingredients.forEach(ing => {
+                        if (aggregatedList[ing.name]) {
+                            aggregatedList[ing.name] += ing.qty;
+                        } else {
+                            aggregatedList[ing.name] = ing.qty;
+                        }
+                    });
+                }
+            }
+            let listHTML = '';
+            for (const item in aggregatedList) {
+                const quantity = Number.isInteger(aggregatedList[item]) ? aggregatedList[item] : aggregatedList[item].toFixed(1);
+                listHTML += `<div><span class="font-medium">${item}:</span> ${quantity} g</div>`;
+            }
+            DOMElements.shoppingList.innerHTML = listHTML || '<p>No hay items en la lista.</p>';
+        }
+
+        function assignWorkout() {
+            const activityLevel = parseFloat(DOMElements.profileForm.elements.activity.value);
+            if (activityLevel >= 1.725) return workoutDB.routines['5-day'];
+            if (activityLevel >= 1.55) return workoutDB.routines['4-day'];
+            return workoutDB.routines['3-day'];
+        }
+
+        function displayWeeklyWorkout(workout) {
+            if (!workout) return;
+            let html = `<h3 class="text-xl font-semibold mb-4 text-gray-700">${workout.name}</h3><div class="space-y-4">`;
+            for(const day in workout.schedule) {
+                const workoutName = workout.schedule[day];
+                const isRestDay = workoutName === 'Descanso';
+                html += `<div class="bg-gray-50 p-4 rounded-lg ${isRestDay ? 'opacity-60' : ''}"><h4 class="font-bold text-lg">${day}</h4><div class="text-sm text-gray-700 mt-2">`;
+                if(isRestDay) { html += `<p class="text-green-600 font-medium">Día de Descanso</p>`; }
+                else {
+                    const exercises = workoutDB.workouts[workoutName];
+                    html += '<ul class="space-y-1 list-disc list-inside">';
+                    exercises.forEach(ex => { html += `<li><span class="font-medium">${ex.ex}:</span> ${ex.sets}</li>`; });
+                    html += '</ul>';
+                }
+                html += `</div></div>`;
+            }
+            html += '</div>';
+            DOMElements.workoutPlan.innerHTML = html;
+        }
+
+        function displayDashboard() {
+            if (!weeklyMenu || !weeklyWorkout) {
+                DOMElements.dashboardContent.innerHTML = '';
+                DOMElements.dashboardPlaceholder.style.display = 'block';
+                return;
+            }
+            DOMElements.dashboardPlaceholder.style.display = 'none';
+            const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
+            const todayKey = today.charAt(0).toUpperCase() + today.slice(1);
+            const todayWorkoutName = weeklyWorkout.schedule[todayKey] || 'Descanso';
+            const isRestDay = todayWorkoutName === 'Descanso';
+            const workoutHTML = `<div><h3 class="text-lg font-semibold text-indigo-700">Entrenamiento de Hoy</h3><div class="mt-2 bg-gray-50 p-4 rounded-lg"><p class="font-bold">${todayWorkoutName}</p>${!isRestDay ? `<ul class="text-sm mt-1 list-disc list-inside">${workoutDB.workouts[todayWorkoutName].map(ex => `<li>${ex.ex}: ${ex.sets}</li>`).join('')}</ul>` : `<p class="text-sm text-green-600">¡Disfruta tu descanso!</p>`}</div></div>`;
+            const nutritionHTML = `<div><h3 class="text-lg font-semibold text-emerald-700">Comidas de Hoy</h3><div class="mt-2 bg-gray-50 p-4 rounded-lg space-y-2">${Object.keys(weeklyMenu[todayKey]).map(mealType => { const meal = weeklyMenu[todayKey][mealType]; return `<div class="text-sm"><p class="font-bold capitalize">${mealType}:</p><p>${meal.name}</p></div>`; }).join('')}</div></div>`;
+            DOMElements.dashboardContent.innerHTML = workoutHTML + nutritionHTML;
+        }
+
+        function displayProgressChart() {
+            if (progressChart) { progressChart.destroy(); }
+            if (progressData.length === 0) {
+                DOMElements.progressChartCanvas.style.display = 'none';
+                return;
+            };
+            DOMElements.progressChartCanvas.style.display = 'block';
+            const labels = progressData.map(d => new Date(d.date).toLocaleDateString('es-ES'));
+            const weights = progressData.map(d => d.weight);
+            progressChart = new Chart(DOMElements.progressChartCanvas, { type: 'line', data: { labels: labels, datasets: [{ label: 'Peso (kg)', data: weights, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
+        }
+
+        DOMElements.downloadPdfBtn.addEventListener('click', () => {
+             if (!weeklyMenu || !userMacros || !weeklyWorkout) { alert("Primero genera un plan completo para poder descargarlo."); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(18); doc.text("Plan Nutricional Semanal", 14, 22);
+            doc.setFontSize(11); doc.setTextColor(100); doc.text(`Objetivo: ${userMacros.target} kcal/día (${userMacros.protein}g P, ${userMacros.fat}g G, ${userMacros.carbs}g C)`, 14, 30);
+            autoTable(doc, { html: '#menu-table', startY: 35, headStyles: { fillColor: [79, 70, 229] } });
+            let finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(16); doc.text("Lista de la Compra", 14, finalY);
+            autoTable(doc, { startY: finalY + 5, body: Array.from(document.getElementById('shopping-list').children).map(child => [child.innerText.split(':')[0], child.innerText.split(':')[1]]), theme: 'grid' });
+            doc.addPage();
+            doc.setFontSize(18); doc.text("Plan de Entrenamiento Semanal", 14, 22);
+            doc.setFontSize(14); doc.setTextColor(100); doc.text(weeklyWorkout.name, 14, 30);
+            let workoutY = 40;
+            for(const day in weeklyWorkout.schedule) {
+                const workoutName = weeklyWorkout.schedule[day];
+                const isRestDay = workoutName === 'Descanso';
+                doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.text(day, 14, workoutY);
+                doc.setFont(undefined, 'normal');
+                if(isRestDay) { doc.setTextColor(34, 197, 94); doc.text("Día de Descanso", 20, workoutY + 5); doc.setTextColor(0, 0, 0); workoutY += 12; }
+                else { const exercises = workoutDB.workouts[workoutName]; let exerciseText = exercises.map(ex => `${ex.ex}: ${ex.sets}`).join('\n'); doc.setFontSize(10); doc.text(exerciseText, 20, workoutY + 5); workoutY += 8 + (exercises.length * 5); }
+                if (workoutY > 260) { doc.addPage(); workoutY = 20; }
+            }
+            doc.save('plan-fitness-integral.pdf');
+        });
+
+    </script>
+</body>
+</html>
