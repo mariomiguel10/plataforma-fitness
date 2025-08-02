@@ -80,7 +80,7 @@
              <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-4 md:mb-0">Panel de Control</h2>
                 <div class="flex items-center space-x-4">
-                    <select id="profile-switcher" class="block w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"></select>
+                    <select id="profile-switcher" aria-label="Seleccionar perfil" class="block w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"></select>
                     <button id="new-profile-btn" class="bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">Crear Nuevo Perfil</button>
                 </div>
              </div>
@@ -234,21 +234,45 @@
         
         // --- Initialization ---
         window.onload = () => {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    DOMElements.userInfo.textContent = `ID de Cuenta: ${userId}`;
-                    await loadAllProfiles();
-                } else {
-                    await signInAnonymously(auth);
-                }
+            // Configuración de Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyC3x9G4ikDZ66xAOMH2iTlqYiJ8yKb0zgA",
+                authDomain: "plataforma-fitness-8e164.firebaseapp.com",
+                projectId: "plataforma-fitness-8e164",
+                storageBucket: "plataforma-fitness-8e164.firebasestorage.app",
+                messagingSenderId: "682757730763",
+                appId: "1:682757730763:web:87e028fb7febf36ff0064e",
+                measurementId: "G-FLRJ8YY217"
+            };
+            
+            appId = 'plataforma-fitness-app';
+            
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, async (user) => {
+                    try {
+                        if (user) {
+                            userId = user.uid;
+                            DOMElements.userInfo.textContent = `ID de Cuenta: ${userId}`;
+                            await loadAllProfiles();
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Error en autenticación:", error);
+                        DOMElements.userInfo.textContent = "Error de conexión";
+                    } finally {
+                        DOMElements.loaderOverlay.style.display = 'none';
+                    }
+                });
+            } catch (error) {
+                console.error("Error inicializando Firebase:", error);
                 DOMElements.loaderOverlay.style.display = 'none';
-            });
+                alert("Error al conectar con la base de datos. Verifica la configuración de Firebase.");
+            }
         };
 
         // --- Profile Management ---
@@ -336,44 +360,83 @@
         }
 
         async function saveProfile() {
-            const profileData = {
-                profileName: DOMElements.profileForm.elements.profileName.value,
-                gender: DOMElements.profileForm.elements.gender.value,
-                age: parseInt(DOMElements.profileForm.elements.age.value),
-                weight: parseFloat(DOMElements.profileForm.elements.weight.value),
-                height: parseInt(DOMElements.profileForm.elements.height.value),
-                activity: parseFloat(DOMElements.profileForm.elements.activity.value),
-                goal: DOMElements.profileForm.elements.goal.value
-            };
+            try {
+                const profileData = {
+                    profileName: DOMElements.profileForm.elements.profileName.value.trim(),
+                    gender: DOMElements.profileForm.elements.gender.value,
+                    age: parseInt(DOMElements.profileForm.elements.age.value),
+                    weight: parseFloat(DOMElements.profileForm.elements.weight.value),
+                    height: parseInt(DOMElements.profileForm.elements.height.value),
+                    activity: parseFloat(DOMElements.profileForm.elements.activity.value),
+                    goal: DOMElements.profileForm.elements.goal.value
+                };
 
-            if (!profileData.profileName || isNaN(profileData.age) || isNaN(profileData.weight) || isNaN(profileData.height)) {
-                alert("Por favor, completa todos los campos del perfil con valores válidos.");
-                return;
+                // Validación mejorada
+                if (!profileData.profileName) {
+                    alert("Por favor, ingresa un nombre para el perfil.");
+                    return;
+                }
+                
+                if (isNaN(profileData.age) || profileData.age < 10 || profileData.age > 120) {
+                    alert("Por favor, ingresa una edad válida (entre 10 y 120 años).");
+                    return;
+                }
+                
+                if (isNaN(profileData.weight) || profileData.weight < 20 || profileData.weight > 300) {
+                    alert("Por favor, ingresa un peso válido (entre 20 y 300 kg).");
+                    return;
+                }
+                
+                if (isNaN(profileData.height) || profileData.height < 100 || profileData.height > 250) {
+                    alert("Por favor, ingresa una altura válida (entre 100 y 250 cm).");
+                    return;
+                }
+
+                // Cálculo de macros
+                let bmr = (profileData.gender === 'male') ? 
+                    (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) + 5 : 
+                    (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) - 161;
+                
+                const maintenanceCalories = bmr * profileData.activity;
+                let targetCalories;
+                
+                if (profileData.goal === 'lose') targetCalories = maintenanceCalories * 0.80;
+                else if (profileData.goal === 'gain') targetCalories = maintenanceCalories * 1.15;
+                else targetCalories = maintenanceCalories;
+                
+                const proteinGrams = profileData.weight * 1.8;
+                const fatCalories = targetCalories * 0.25;
+                const carbCalories = targetCalories - (proteinGrams * 4) - fatCalories;
+                
+                const macrosData = { 
+                    maintenance: Math.round(maintenanceCalories), 
+                    target: Math.round(targetCalories), 
+                    protein: Math.round(proteinGrams), 
+                    fat: Math.round(fatCalories / 9), 
+                    carbs: Math.round(carbCalories / 4) 
+                };
+
+                let docId = activeProfileId;
+                if (!docId) {
+                    const newProfileRef = doc(collection(db, `artifacts/${appId}/users/${userId}/profiles`));
+                    docId = newProfileRef.id;
+                }
+                
+                const profileRef = doc(db, `artifacts/${appId}/users/${userId}/profiles`, docId);
+                await setDoc(profileRef, { 
+                    profile: profileData, 
+                    macros: macrosData, 
+                    lastAccessed: serverTimestamp() 
+                }, { merge: true });
+                
+                alert(`Perfil "${profileData.profileName}" guardado con éxito.`);
+                await loadAllProfiles();
+                await switchActiveProfile(docId);
+                
+            } catch (error) {
+                console.error("Error guardando perfil:", error);
+                alert("Error al guardar el perfil. Verifica tu conexión e intenta de nuevo.");
             }
-
-            let bmr = (profileData.gender === 'male') ? (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) + 5 : (10 * profileData.weight) + (6.25 * profileData.height) - (5 * profileData.age) - 161;
-            const maintenanceCalories = bmr * profileData.activity;
-            let targetCalories;
-            if (profileData.goal === 'lose') targetCalories = maintenanceCalories * 0.80;
-            else if (profileData.goal === 'gain') targetCalories = maintenanceCalories * 1.15;
-            else targetCalories = maintenanceCalories;
-            const proteinGrams = profileData.weight * 1.8;
-            const fatCalories = targetCalories * 0.25;
-            const carbCalories = targetCalories - (proteinGrams * 4) - fatCalories;
-            const macrosData = { maintenance: Math.round(maintenanceCalories), target: Math.round(targetCalories), protein: Math.round(proteinGrams), fat: Math.round(fatCalories / 9), carbs: Math.round(carbCalories / 4) };
-
-            let docId = activeProfileId;
-            if (!docId) {
-                const newProfileRef = doc(collection(db, `artifacts/${appId}/users/${userId}/profiles`));
-                docId = newProfileRef.id;
-            }
-            
-            const profileRef = doc(db, `artifacts/${appId}/users/${userId}/profiles`, docId);
-            await setDoc(profileRef, { profile: profileData, macros: macrosData, lastAccessed: serverTimestamp() }, { merge: true });
-            
-            alert(`Perfil "${profileData.profileName}" guardado con éxito.`);
-            await loadAllProfiles();
-            await switchActiveProfile(docId);
         }
         
         async function saveUserPlans(menuData, workoutData) {
@@ -436,21 +499,61 @@
             DOMElements.aiRecipeOutput.classList.remove('hidden');
             DOMElements.recipeLoaderContainer.classList.remove('hidden');
             DOMElements.recipeText.classList.add('hidden');
+            
             const ingredientsString = ingredientsList.map(ing => `${ing.qty}g de ${ing.name}`).join(', ');
             const prompt = `Eres un chef experto. Crea una receta sencilla y saludable llamada '${mealName}' usando exactamente los siguientes ingredientes y cantidades: ${ingredientsString}. Proporciona los pasos de preparación de forma clara y concisa, usando Markdown para los títulos y las listas.`;
+            
             try {
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = "";
+                
+                // IMPORTANTE: Reemplaza con tu API key real de Google Gemini
+                const apiKey = "TU_API_KEY_DE_GEMINI_AQUI";
+                
+                if (!apiKey || apiKey === "TU_API_KEY_DE_GEMINI_AQUI") {
+                    throw new Error("API key no configurada");
+                }
+                
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                const response = await fetch(apiUrl, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error de API: ${response.status} - ${response.statusText}`);
+                }
+                
                 const result = await response.json();
                 const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar la receta. Inténtalo de nuevo.";
                 DOMElements.recipeText.innerHTML = text.replace(/\n/g, '<br>');
+                
             } catch (error) {
                 console.error("Error generating recipe:", error);
-                DOMElements.recipeText.textContent = "Hubo un error al generar la receta. Por favor, revisa la consola para más detalles.";
+                
+                if (error.message.includes("API key")) {
+                    DOMElements.recipeText.innerHTML = `
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-yellow-800 mb-2">API Key no configurada</h4>
+                            <p class="text-yellow-700 text-sm">
+                                Para usar la generación de recetas con IA, necesitas configurar tu API key de Google Gemini.
+                                <br><br>
+                                <strong>Pasos:</strong>
+                                <br>1. Ve a <a href="https://makersuite.google.com/app/apikey" target="_blank" class="underline">Google AI Studio</a>
+                                <br>2. Crea una nueva API key
+                                <br>3. Reemplaza "TU_API_KEY_DE_GEMINI_AQUI" en el código
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    DOMElements.recipeText.innerHTML = `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-red-800 mb-2">Error al generar receta</h4>
+                            <p class="text-red-700 text-sm">${error.message}</p>
+                        </div>
+                    `;
+                }
             } finally {
                 DOMElements.recipeLoaderContainer.classList.add('hidden');
                 DOMElements.recipeText.classList.remove('hidden');
@@ -623,15 +726,35 @@
         }
 
         function displayProgressChart() {
-            if (progressChart) { progressChart.destroy(); }
+            if (progressChart) { 
+                progressChart.destroy(); 
+            }
             if (progressData.length === 0) {
                 DOMElements.progressChartCanvas.style.display = 'none';
                 return;
-            };
+            }
             DOMElements.progressChartCanvas.style.display = 'block';
             const labels = progressData.map(d => new Date(d.date).toLocaleDateString('es-ES'));
             const weights = progressData.map(d => d.weight);
-            progressChart = new Chart(DOMElements.progressChartCanvas, { type: 'line', data: { labels: labels, datasets: [{ label: 'Peso (kg)', data: weights, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
+            progressChart = new Chart(DOMElements.progressChartCanvas, { 
+                type: 'line', 
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        label: 'Peso (kg)', 
+                        data: weights, 
+                        borderColor: '#4f46e5', 
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)', 
+                        fill: true, 
+                        tension: 0.1 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { y: { beginAtZero: false } } 
+                } 
+            });
         }
 
         DOMElements.downloadPdfBtn.addEventListener('click', () => {
